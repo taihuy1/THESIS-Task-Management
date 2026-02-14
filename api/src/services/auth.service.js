@@ -11,7 +11,8 @@ const login = async (email, password) => {
     if (!user) {
         logger.warn(`Login attempt failed: user "${email}" not found`);
         throw new AuthenticationError('Invalid credentials');
-    // Verify password
+    }
+
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
         logger.warn(`Login attempt failed: invalid password for user "${email}"`);

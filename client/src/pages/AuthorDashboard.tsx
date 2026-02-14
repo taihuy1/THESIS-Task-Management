@@ -72,29 +72,38 @@ export default function AuthorDashboard() {
         </select>
       </div>
 
-      {showForm && <TaskCreationForm onSubmit={handleCreate} onCancel={() => setShowForm(false)} />}
+      {/* Side-by-side layout: form on left, table on right */}
+      <div className={showForm ? 'dashboard-layout' : ''}>
+        {showForm && (
+          <div className="creation-panel">
+            <TaskCreationForm onSubmit={handleCreate} onCancel={() => setShowForm(false)} />
+          </div>
+        )}
 
-      {isLoading ? (
-        <p>Loading tasks...</p>
-      ) : (
-        <TaskTable tasks={tasks} selectedId={selectedId} onSelect={setSelectedId} role="AUTHOR" />
-      )}
+        <div className={showForm ? 'tables-wrapper' : ''}>
+          {isLoading ? (
+            <p>Loading tasks...</p>
+          ) : (
+            <TaskTable tasks={tasks} selectedId={selectedId} onSelect={setSelectedId} role="AUTHOR" />
+          )}
 
-      {/* Detail or edit panel below the table */}
-      {selectedTask && !editing && (
-        <TaskDetailPanel
-          task={selectedTask}
-          role="AUTHOR"
-          onEdit={() => setEditing(true)}
-          onApprove={approveTask}
-          onReject={rejectTask}
-          onDelete={handleDelete}
-        />
-      )}
+          {/* Detail or edit panel below the table */}
+          {selectedTask && !editing && (
+            <TaskDetailPanel
+              task={selectedTask}
+              role="AUTHOR"
+              onEdit={() => setEditing(true)}
+              onApprove={approveTask}
+              onReject={rejectTask}
+              onDelete={handleDelete}
+            />
+          )}
 
-      {selectedTask && editing && (
-        <TaskEditForm task={selectedTask} onSave={handleSaveEdit} onCancel={() => setEditing(false)} />
-      )}
+          {selectedTask && editing && (
+            <TaskEditForm task={selectedTask} onSave={handleSaveEdit} onCancel={() => setEditing(false)} />
+          )}
+        </div>
+      </div>
     </div>
   );
 }

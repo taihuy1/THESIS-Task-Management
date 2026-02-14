@@ -17,6 +17,121 @@
   min-width: 150px;
 }
 
+.dashboard-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.creation-panel {
+  flex: 0 0 360px;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+}
+
+.creation-panel h3 {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.creation-panel form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.creation-panel form > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.creation-panel label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.creation-panel input,
+.creation-panel select,
+.creation-panel textarea {
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.creation-panel input:focus,
+.creation-panel select:focus,
+.creation-panel textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.creation-panel textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.creation-form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.creation-form-actions button {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  color: #fff;
+}
+
+.creation-form-actions .btn-submit {
+  background: #2563eb;
+}
+
+.creation-form-actions .btn-submit:hover:not(:disabled) {
+  background: #1d4ed8;
+}
+
+.creation-form-actions .btn-submit:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.creation-form-actions .btn-cancel {
+  background: #6b7280;
+}
+
+.creation-form-actions .btn-cancel:hover {
+  background: #4b5563;
+}
+
+.tables-wrapper {
+  flex: 1;
+}
+
+.tables-wrapper .task-table {
+  width: 100%;
+}
+
 .task-table {
   width: 100%;
   border-collapse: collapse;
