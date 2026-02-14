@@ -12,6 +12,12 @@ export enum Priority {
     HIGH = 'HIGH',
 }
 
+export interface UserRef {
+    id: string;
+    name: string;
+    email: string;
+}
+
 export interface Task {
     id: string;
     title: string;
@@ -20,6 +26,8 @@ export interface Task {
     priority: Priority;
     authorId: string;
     solverId?: string;
+    author?: UserRef;
+    solver?: UserRef;
     startedAt?: string;
     completedAt?: string;
     approvedAt?: string;

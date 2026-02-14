@@ -51,6 +51,7 @@ export default function TaskTable({ tasks, selectedId, onSelect, role }: Props) 
           <th>Status</th>
           <th>Priority</th>
           {role === 'AUTHOR' && <th>Solver</th>}
+          {role === 'SOLVER' && <th>Author</th>}
           <th className="sortable" onClick={toggleSort}>
             Due Date{arrow}
           </th>
@@ -60,7 +61,7 @@ export default function TaskTable({ tasks, selectedId, onSelect, role }: Props) 
       <tbody>
         {sorted.length === 0 ? (
           <tr className="empty-row">
-            <td colSpan={role === 'AUTHOR' ? 6 : 5}>No tasks found</td>
+            <td colSpan={role === 'AUTHOR' ? 6 : 6}>No tasks found</td>
           </tr>
         ) : (
           sorted.map(task => (
@@ -86,7 +87,8 @@ export default function TaskTable({ tasks, selectedId, onSelect, role }: Props) 
                   {task.priority}
                 </span>
               </td>
-              {role === 'AUTHOR' && <td>{(task as any).solver?.name ?? '—'}</td>}
+              {role === 'AUTHOR' && <td>{task.solver?.name ?? '—'}</td>}
+              {role === 'SOLVER' && <td>{task.author?.name ?? '—'}</td>}
               <td>
                 {task.dueDate ? (
                   role === 'SOLVER'
