@@ -1,0 +1,14 @@
+/* Deadline text — urgency indicated purely through color, no badges or icons. */
+
+.deadline-text {
+  font-size: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: default;
+  transition: color 0.2s ease;
+}
+
+.deadline-safe    { color: #059669; }
+.deadline-warning { color: #b45309; }
+.deadline-urgent  { color: #dc2626; font-weight: 600; }
+.deadline-overdue { color: #dc2626; font-weight: 600; }

@@ -1,0 +1,251 @@
+/*
+  dashboard.css
+  Styles for the task table, toolbar, detail panel, and edit form.
+  Shared between Author and Solver dashboards.
+*/
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.toolbar select {
+  width: auto;
+  min-width: 150px;
+}
+
+.task-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.task-table th,
+.task-table td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.task-table th {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #374151;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.task-table th.sortable {
+  cursor: pointer;
+}
+
+.task-table th.sortable:hover {
+  background: #f3f4f6;
+}
+
+.task-table tbody tr {
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.task-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.task-table tbody tr.selected {
+  background: #eff6ff;
+  border-left: 3px solid #2563eb;
+}
+
+.task-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.task-table .empty-row td {
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+}
+
+/* Status pill inside table cells */
+.status-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.priority-text {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.detail-panel {
+  margin-top: 16px;
+  padding: 20px 24px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.detail-panel h3 {
+  margin: 0 0 16px;
+  font-size: 20px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 32px;
+  margin-bottom: 20px;
+}
+
+.detail-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+}
+
+.detail-field span,
+.detail-field p {
+  font-size: 14px;
+  color: #111827;
+  margin: 0;
+}
+
+.detail-description {
+  grid-column: 1 / -1;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.detail-actions button {
+  font-size: 13px;
+  padding: 6px 14px;
+}
+
+.btn-edit {
+  background: #2563eb;
+}
+
+.btn-edit:hover {
+  background: #1d4ed8;
+}
+
+.btn-approve {
+  background: #059669;
+}
+
+.btn-approve:hover {
+  background: #047857;
+}
+
+.btn-reject {
+  background: #dc2626;
+}
+
+.btn-reject:hover {
+  background: #b91c1c;
+}
+
+.btn-delete {
+  background: transparent;
+  color: #dc2626;
+  border: 1px solid #dc2626;
+}
+
+.btn-delete:hover {
+  background: #fef2f2;
+}
+
+.btn-start {
+  background: #2563eb;
+}
+
+.btn-start:hover {
+  background: #1d4ed8;
+}
+
+.btn-complete {
+  background: #059669;
+}
+
+.btn-complete:hover {
+  background: #047857;
+}
+
+.btn-cancel {
+  background: #6b7280;
+}
+
+.btn-cancel:hover {
+  background: #4b5563;
+}
+
+.edit-form {
+  margin-top: 16px;
+  padding: 20px 24px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.edit-form h3 {
+  margin: 0 0 16px;
+  font-size: 18px;
+}
+
+.edit-form .form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 24px;
+}
+
+.edit-form .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.edit-form .form-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.edit-form .form-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.edit-form .form-field input,
+.edit-form .form-field select,
+.edit-form .form-field textarea {
+  font-size: 14px;
+}
+
+.edit-form .form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
