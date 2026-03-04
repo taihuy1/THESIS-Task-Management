@@ -1,24 +1,14 @@
-// User routes
 const express = require('express');
 const router = express.Router();
+const userController = require('../controllers/user.controller');
+const { authenticate } = require('../middleware/auth.middleware');
+const { dbCheck } = require('../middleware/db.middleware');
+const { validateParams } = require('../middleware/validation.middleware');
+const { idSchema } = require('../validators/common.validator');
 
-const { userController } = require('../controllers');
-const { authenticateToken, requireDatabase, validateParams } = require('../middleware');
-const { idSchema } = require('../validators');
+router.use(authenticate, dbCheck);
 
-// GET /users - Get all solvers (for task assignment)
-router.get('/',
-    authenticateToken,
-    requireDatabase,
-    userController.getSolvers
-);
-
-// GET /users/:id - Get user by ID
-router.get('/:id',
-    authenticateToken,
-    requireDatabase,
-    validateParams(idSchema),
-    userController.getUserById
-);
+router.get('/', userController.getSolvers);
+router.get('/:id', validateParams(idSchema), userController.getUserById);
 
 module.exports = router;

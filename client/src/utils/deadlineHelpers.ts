@@ -1,9 +1,3 @@
-/*
-  deadlineHelpers.ts
-  Pure utility functions for deadline time math and display formatting.
-  No side effects — safe to call from any component or hook.
-*/
-
 export interface TimeRemaining {
   days: number;
   hours: number;
@@ -21,7 +15,6 @@ export interface DeadlineStatus {
   label: string;
 }
 
-// Breaks a dueDate into days/hours/minutes/seconds from now.
 export function calculateTimeRemaining(dueDate: string | Date | null): TimeRemaining | null {
   if (!dueDate) return null;
 
@@ -41,7 +34,6 @@ export function calculateTimeRemaining(dueDate: string | Date | null): TimeRemai
   };
 }
 
-// Maps remaining days into an urgency tier with color and label.
 export function getUrgencyLevel(daysRemaining: number, isOverdue: boolean): DeadlineStatus {
   if (isOverdue) return { level: 'OVERDUE', color: '#dc2626', label: 'Overdue' };
   if (daysRemaining <= 2) return { level: 'URGENT', color: '#dc2626', label: 'Urgent' };
@@ -49,29 +41,35 @@ export function getUrgencyLevel(daysRemaining: number, isOverdue: boolean): Dead
   return { level: 'SAFE', color: '#059669', label: 'On track' };
 }
 
-// Converts TimeRemaining into a natural sentence ("Due tomorrow", "Overdue by 3 days").
 export function formatDeadlineDisplay(timeRemaining: TimeRemaining | null): string {
-  if (!timeRemaining) return 'No deadline';
+  if (!timeRemaining) return 'no deadline';
 
   const { days, hours, minutes, isOverdue } = timeRemaining;
 
   if (isOverdue) {
-    if (days > 0) return `Overdue by ${days} day${days !== 1 ? 's' : ''}`;
-    if (hours > 0) return `Overdue by ${hours} hour${hours !== 1 ? 's' : ''}`;
+    if (days > 0) return `Overdue by ${days}d`;
+    if (hours > 0) return `Overdue ${hours}h`;
     return `Overdue by ${minutes} min`;
   }
 
-  if (days > 1) return `Due in ${days} days`;
-  if (days === 1) return 'Due tomorrow';
-  if (hours > 1) return `Due in ${hours} hours`;
-  if (hours === 1) return 'Due in about an hour';
-  if (minutes > 1) return `Due in ${minutes} minutes`;
-  return 'Due any moment now';
+  // threshold cascade
+  if (days > 1) {
+    return `Due in ${days} days`;
+  } else if (days === 1) {
+    return 'Due tmrw';
+  } else if (hours > 1) {
+    return `Due in ${hours}h`;
+  } else if (hours === 1) {
+    return 'Due in ~1 hour';
+  } else if (minutes > 1) {
+    return `Due in ${minutes} min`;
+  }
+
+  return 'Due very soon';
 }
 
-// Formats a dueDate as a short readable string (e.g. "Feb 15, 2:30 PM").
 export function formatDeadlineDate(dueDate: string | Date | null): string {
-  if (!dueDate) return 'No deadline';
+  if (!dueDate) return 'no deadline';
 
   return new Date(dueDate).toLocaleDateString('en-US', {
     month: 'short',

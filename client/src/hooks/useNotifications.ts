@@ -1,53 +1,27 @@
-/*
-  useNotifications.ts
-  Fetches and manages the current user's notifications.
-  Loads once on mount; live refreshes are driven by the SSE hook
-  calling loadNotifications() when the server pushes an event.
-*/
-
-import { useState, useEffect, useCallback } from 'react';
-import { Notification } from '@/types/notification.types';
-import * as notificationService from '@/services/api/notificationService';
+import { useState, useEffect } from 'react';
+import { Notification } from '@/types/notification.types'; // finally using the proper type
+import * as notifService from '@/services/api/notificationService';
 
 export function useNotifications(autoLoad = true) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [items, setItems] = useState<Notification[]>([]);
 
-  const loadNotifications = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await notificationService.getNotifications();
-      setNotifications(data);
-    } catch (err) {
-      console.error('Failed to load notifications:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  async function load() {
+    try { setItems(await notifService.getNotifications()); }
+    catch (err) { console.error('notifs load err', err); }
+  }
 
   const markRead = async (id: string) => {
-    try {
-      await notificationService.markAsRead(id);
-      setNotifications(prev => prev.map(n => (n.id === id ? { ...n, isRead: true } : n)));
-    } catch (err) {
-      console.error('Failed to mark as read:', err);
-    }
+    await notifService.markAsRead(id).catch(() => {});
+    setItems(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
   };
 
   const markAllRead = async () => {
-    try {
-      await notificationService.markAllAsRead();
-      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-    } catch (err) {
-      console.error('Failed to mark all as read:', err);
-    }
+    await notifService.markAllAsRead().catch(() => {});
+    setItems(prev => prev.map(n => ({ ...n, isRead: true })));
   };
 
-  useEffect(() => {
-    if (autoLoad) loadNotifications();
-  }, [autoLoad, loadNotifications]);
+  useEffect(() => { if (autoLoad) load(); }, [autoLoad]);
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  return { notifications, unreadCount, loadNotifications, markRead, markAllRead, isLoading };
+  const unreadCount = items.filter(n => !n.isRead).length;
+  return { notifications: items, unreadCount, loadNotifications: load, markRead, markAllRead };
 }

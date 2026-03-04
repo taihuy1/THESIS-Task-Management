@@ -1,49 +1,24 @@
-// Request validation via Joi schemas
-const { errorResponse } = require('../utils/response');
+const { fail } = require('../utils/response');
 
-const validateRequest = (schema) => {
-    return (req, res, next) => {
-        const { error, value } = schema.validate(req.body, {
-            abortEarly: false,
-            stripUnknown: true
-        });
+// just grab the message strings, no need to reshape them
+function _mapErrors(details) {
+    return details.map(d => d.message.replace(/"/g, ''));
+}
 
-        if (error) {
-            const errors = error.details.map(detail => ({
-                field: detail.path.join('.'),
-                message: detail.message.replace(/"/g, '') // Clean up Joi quotes
-            }));
-
-            return errorResponse(res, 'Validation failed', 422, errors);
-        }
-
-        // Replace req.body with validated and sanitized value
-        req.body = value;
-        next();
-    };
+const validate = (schema) => (req, res, next) => {
+    const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) return fail(res, 'validation failed', 422, _mapErrors(error.details));
+    req.body = value;
+    next();
 };
 
-const validateParams = (schema) => {
+function validateParams(schema) {
     return (req, res, next) => {
-        const { error, value } = schema.validate(req.params, {
-            abortEarly: false
-        });
-
-        if (error) {
-            const errors = error.details.map(detail => ({
-                field: detail.path.join('.'),
-                message: detail.message.replace(/"/g, '')
-            }));
-
-            return errorResponse(res, 'Invalid parameters', 400, errors);
-        }
-
+        const { error, value } = schema.validate(req.params, { abortEarly: false });
+        if (error) return fail(res, 'bad params', 400, _mapErrors(error.details));
         req.params = value;
         next();
     };
-};
+}
 
-module.exports = {
-    validateRequest,
-    validateParams
-};
+module.exports = { validate, validateParams };

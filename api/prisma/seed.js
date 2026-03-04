@@ -1,21 +1,14 @@
 const bcrypt = require('bcrypt');
 const { prisma } = require('../src/lib/prisma');
 
-const SALT_ROUNDS = 10;
-
 async function main() {
-    console.log('Seeding database...');
+    console.log('seeding...');
+    const pw = await bcrypt.hash('seed1223', 10);
 
-    // Hash password for all test users
-    const hashedPassword = await bcrypt.hash('seed1223', SALT_ROUNDS);
-
-    // Create author users
     const authors = [
         { email: 'prof.vondrak@university.edu', name: 'Prof. Vondrak', role: 'AUTHOR' },
         { email: 'manager.smith@company.com', name: 'Manager Smith', role: 'AUTHOR' }
     ];
-
-    // Create solver users
     const solvers = [
         { email: 'tai.huy@student.edu', name: 'Tai Huy Le', role: 'SOLVER' },
         { email: 'anna.novak@student.edu', name: 'Anna Novak', role: 'SOLVER' },
@@ -23,59 +16,27 @@ async function main() {
         { email: 'lucie.horova@student.edu', name: 'Lucie Horova', role: 'SOLVER' }
     ];
 
-    let createdUsers = 0;
-    let skippedUsers = 0;
-
-    // Upsert authors
-    for (const author of authors) {
-        const existing = await prisma.user.findUnique({
-            where: { email: author.email }
-        });
-
-        if (existing) {
+    for (const u of [...authors, ...solvers]) {
+        const exists = await prisma.user.findUnique({ where: { email: u.email } });
+        if (exists) {
             await prisma.user.update({
-                where: { email: author.email },
-                data: { password: hashedPassword, name: author.name, role: author.role }
+                where: { email: u.email },
+                data: { password: pw, name: u.name, role: u.role }
             });
-            skippedUsers++;
         } else {
-            await prisma.user.create({
-                data: { ...author, password: hashedPassword }
-            });
-            createdUsers++;
+            await prisma.user.create({ data: { ...u, password: pw } });
         }
     }
+    console.log('users done');
 
-    // Upsert solvers
-    for (const solver of solvers) {
-        const existing = await prisma.user.findUnique({
-            where: { email: solver.email }
-        });
+    const prof = await prisma.user.findUnique({ where: { email: 'prof.vondrak@university.edu' } });
+    const smith = await prisma.user.findUnique({ where: { email: 'manager.smith@company.com' } });
+    const tai = await prisma.user.findUnique({ where: { email: 'tai.huy@student.edu' } });
+    const anna = await prisma.user.findUnique({ where: { email: 'anna.novak@student.edu' } });
+    const pavel = await prisma.user.findUnique({ where: { email: 'pavel.kovar@student.edu' } });
 
-        if (existing) {
-            await prisma.user.update({
-                where: { email: solver.email },
-                data: { password: hashedPassword, name: solver.name, role: solver.role }
-            });
-            skippedUsers++;
-        } else {
-            await prisma.user.create({
-                data: { ...solver, password: hashedPassword }
-            });
-            createdUsers++;
-        }
-    }
-
-    console.log(`Seeding complete!`);
-    console.log(`Created users: ${createdUsers}`);
-    
 }
 
 main()
-    .catch((e) => {
-        console.error('Seeding error:', e);
-        process.exit(1);
-    })
-    .finally(async () => {
-        await prisma.$disconnect();
-    });
+    .catch((e) => { console.error('seed error:', e); process.exit(1); })
+    .finally(() => prisma.$disconnect());

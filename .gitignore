@@ -15,4 +15,8 @@ dist/
 
 package-lock.json
 
+docs/  
 
+test-results/
+
+tests/e2e/

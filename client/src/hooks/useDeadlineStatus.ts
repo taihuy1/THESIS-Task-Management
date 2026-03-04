@@ -1,9 +1,3 @@
-/*
-  useDeadlineStatus.ts
-  React hook that wraps deadline helpers with a 30-second auto-refresh
-  so the countdown stays live without manual interaction.
-*/
-
 import { useState, useEffect, useCallback } from 'react';
 import {
   calculateTimeRemaining,
@@ -13,43 +7,34 @@ import {
   DeadlineStatus,
 } from '@/utils/deadlineHelpers';
 
-interface DeadlineState {
+interface State {
   timeRemaining: TimeRemaining | null;
-  urgencyStatus: DeadlineStatus | null;
+  urgency: DeadlineStatus | null;
   displayText: string;
   isOverdue: boolean;
 }
 
-const REFRESH_INTERVAL = 30_000; // 30 seconds
+const TICK = 20_000; // ~20s
 
-export function useDeadlineStatus(dueDate: string | Date | null): DeadlineState {
-  const [state, setState] = useState<DeadlineState>({
-    timeRemaining: null,
-    urgencyStatus: null,
-    displayText: 'No deadline set',
-    isOverdue: false,
+export function useDeadlineStatus(dueDate: string | Date | null): State {
+  const [state, setState] = useState<State>({
+    timeRemaining: null, urgency: null, displayText: 'No deadline set', isOverdue: false,
   });
 
   const refresh = useCallback(() => {
     const time = calculateTimeRemaining(dueDate);
     if (!time) {
-      setState({ timeRemaining: null, urgencyStatus: null, displayText: 'No deadline set', isOverdue: false });
+      setState({ timeRemaining: null, urgency: null, displayText: 'No deadline set', isOverdue: false });
       return;
     }
-
-    const daysRemaining = time.totalSeconds / 86400;
-    const urgency = getUrgencyLevel(daysRemaining, time.isOverdue);
-    const text = formatDeadlineDisplay(time);
-
-    setState({ timeRemaining: time, urgencyStatus: urgency, displayText: text, isOverdue: time.isOverdue });
+    const days = time.totalSeconds / 86400;
+    const urg = getUrgencyLevel(days, time.isOverdue);
+    setState({ timeRemaining: time, urgency: urg, displayText: formatDeadlineDisplay(time), isOverdue: time.isOverdue });
   }, [dueDate]);
 
-  // Run immediately on mount and whenever dueDate changes
   useEffect(() => { refresh(); }, [refresh]);
-
-  // Tick every 30s to keep the countdown fresh
   useEffect(() => {
-    const id = setInterval(refresh, REFRESH_INTERVAL);
+    const id = setInterval(refresh, TICK);
     return () => clearInterval(id);
   }, [refresh]);
 

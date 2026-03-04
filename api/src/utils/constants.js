@@ -1,10 +1,7 @@
-// Application-wide constants: roles, statuses, transitions
-
 const ROLES = {
     AUTHOR: 'AUTHOR',
     SOLVER: 'SOLVER'
 };
-
 const TASK_STATUS = {
     PENDING: 'PENDING',
     STARTED: 'STARTED',
@@ -13,7 +10,6 @@ const TASK_STATUS = {
     REJECTED: 'REJECTED'
 };
 
-// Allowed state transitions
 const STATUS_TRANSITIONS = {
     [TASK_STATUS.PENDING]: [TASK_STATUS.STARTED],
     [TASK_STATUS.STARTED]: [TASK_STATUS.COMPLETED],
@@ -22,9 +18,8 @@ const STATUS_TRANSITIONS = {
     [TASK_STATUS.REJECTED]: [TASK_STATUS.STARTED]
 };
 
-const isValidTransition = (currentStatus, newStatus) => {
-    const allowedTransitions = STATUS_TRANSITIONS[currentStatus] || [];
-    return allowedTransitions.includes(newStatus);
+const isValidTransition = (from, to) => {
+    return (STATUS_TRANSITIONS[from] || []).includes(to);
 };
 
 const NOTIFICATION_TYPES = {
@@ -35,24 +30,10 @@ const NOTIFICATION_TYPES = {
     TASK_COMPLETED: 'TASK_COMPLETED'
 };
 
-const HTTP_STATUS = {
-    OK: 200,
-    CREATED: 201,
-    NO_CONTENT: 204,
-    BAD_REQUEST: 400,
-    UNAUTHORIZED: 401,
-    FORBIDDEN: 403,
-    NOT_FOUND: 404,
-    CONFLICT: 409,
-    UNPROCESSABLE: 422,
-    INTERNAL_ERROR: 500
-};
-
 module.exports = {
     ROLES,
     TASK_STATUS,
     STATUS_TRANSITIONS,
     isValidTransition,
-    NOTIFICATION_TYPES,
-    HTTP_STATUS
+    NOTIFICATION_TYPES
 };

@@ -1,44 +1,28 @@
-/*
-  sseClients.js
-  In-memory registry of active Server-Sent Event connections.
-  Each authenticated user can have multiple open tabs, so we
-  store a Set of response objects per userId.
-*/
-
 const logger = require('../utils/logger');
 
-const clients = new Map(); // userId -> Set<http.ServerResponse>
+const clients = new Map();
 
-// Register a new SSE response stream for a user.
-function addClient(userId, res) {
-  if (!clients.has(userId)) clients.set(userId, new Set());
-  clients.get(userId).add(res);
-  logger.info('SSE client connected', { userId, total: clients.get(userId).size });
+function addClient(uid, res) {
+  if (!clients.has(uid)) clients.set(uid, new Set());
+  clients.get(uid).add(res);
+  logger.info('sse:connect', { uid, n: clients.get(uid).size });
 }
 
-// Unregister a response when the browser disconnects.
-function removeClient(userId, res) {
-  const set = clients.get(userId);
-  if (!set) return;
-  set.delete(res);
-  if (set.size === 0) clients.delete(userId);
-  logger.info('SSE client disconnected', { userId, remaining: set?.size ?? 0 });
+function removeClient(uid, res) {
+  const s = clients.get(uid);
+  if (!s) return;
+  s.delete(res);
+  if (s.size === 0) clients.delete(uid);
+  logger.info('sse:disconnect', { uid });
 }
 
-// Push a named event to every open connection for a given user.
-function sendEvent(userId, event, data = {}) {
-  const set = clients.get(userId);
-  if (!set || set.size === 0) return;
-
+function sendEvent(uid, event, data = {}) {
+  const s = clients.get(uid);
+  if (!s || !s.size) return;
   const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-
-  for (const res of set) {
-    try {
-      res.write(payload);
-    } catch {
-      logger.warn('SSE write failed, removing stale client', { userId });
-      set.delete(res);
-    }
+  for (const r of s) {
+    try { r.write(payload); }
+    catch { s.delete(r); }
   }
 }
 

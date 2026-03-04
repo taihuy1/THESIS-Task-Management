@@ -1,38 +1,16 @@
-// Notification routes
 const express = require('express');
 const router = express.Router();
+const notificationController = require('../controllers/notification.controller');
+const { authenticate } = require('../middleware/auth.middleware');
+const { dbCheck } = require('../middleware/db.middleware');
+const { validateParams } = require('../middleware/validation.middleware');
+const { idSchema } = require('../validators/common.validator');
 
-const { notificationController } = require('../controllers');
-const { authenticateToken, requireDatabase, validateParams } = require('../middleware');
-const { idSchema } = require('../validators');
+router.use(authenticate, dbCheck);
 
-// GET /notifications - Get all notifications for user
-router.get('/',
-    authenticateToken,
-    requireDatabase,
-    notificationController.getNotifications
-);
-
-// GET /notifications/unread-count - Get unread count
-router.get('/unread-count',
-    authenticateToken,
-    requireDatabase,
-    notificationController.getUnreadCount
-);
-
-// PUT /notifications/:id/read - Mark as read
-router.put('/:id/read',
-    authenticateToken,
-    requireDatabase,
-    validateParams(idSchema),
-    notificationController.markAsRead
-);
-
-// PUT /notifications/read-all - Mark all as read
-router.put('/read-all',
-    authenticateToken,
-    requireDatabase,
-    notificationController.markAllAsRead
-);
+router.get('/', notificationController.getNotifications);
+router.get('/unread-count', notificationController.getUnreadCount);
+router.put('/:id/read', validateParams(idSchema), notificationController.markAsRead);
+router.put('/read-all', notificationController.markAllAsRead);
 
 module.exports = router;

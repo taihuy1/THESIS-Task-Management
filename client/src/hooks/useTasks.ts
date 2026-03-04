@@ -1,37 +1,37 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Task, CreateTaskPayload, UpdateTaskPayload, TaskStatus } from '@/types/task.types';
+import { useState, useEffect, useMemo } from 'react';
+import { Task, CreateTaskPayload, UpdateTaskPayload } from '@/types/task.types';
 import * as taskService from '@/services/api/taskService';
 import { normalizeError } from '@/utils/errorHandler';
 
 interface UseTasksOptions {
-    statusFilter?: TaskStatus;
+    statusFilter?: string;
     autoLoad?: boolean;
 }
 
-export function useTasks(options: UseTasksOptions = {}) {
-    const { statusFilter, autoLoad = true } = options;
+export function useTasks(opts: UseTasksOptions = {}) {
+    const { statusFilter, autoLoad = true } = opts;
     const [tasks, setTasks] = useState<Task[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const loadTasks = useCallback(async () => {
+    // swap one task in the list by id
+    const patch = (prev: Task[], id: string, next: Task) =>
+        prev.map(t => t.id === id ? next : t);
+
+    async function loadTasks() {
+        setLoading(true);
+        setError(null);
         try {
-            setIsLoading(true);
-            setError(null);
             const data = await taskService.getTasks();
             setTasks(data);
         } catch (err) {
-            const apiError = normalizeError(err);
-            setError(apiError.message);
-        } finally {
-            setIsLoading(false);
+            setError(normalizeError(err).message);
         }
-    }, []);
+        setLoading(false);
+    }
 
-    // Client-side filtering (backend already filters by role via JWT)
-    const filteredTasks = useMemo(() => {
-        if (!statusFilter) return tasks;
-        return tasks.filter(t => t.status === statusFilter);
+    const filtered = useMemo(() => {
+        return statusFilter ? tasks.filter(t => t.status === statusFilter) : tasks;
     }, [tasks, statusFilter]);
 
     const createTask = async (payload: CreateTaskPayload) => {
@@ -41,55 +41,63 @@ export function useTasks(options: UseTasksOptions = {}) {
     };
 
     const updateTask = async (id: string, payload: UpdateTaskPayload) => {
-        const updated = await taskService.updateTask(id, payload);
-        setTasks(prev => prev.map(t => t.id === id ? updated : t));
-        return updated;
+        const t = await taskService.updateTask(id, payload);
+        setTasks(prev => patch(prev, id, t));
+        return t;
     };
 
-    const deleteTask = async (id: string) => {
+    // just remove from local list, server already deleted it
+    async function deleteTask(id: string) {
         await taskService.deleteTask(id);
         setTasks(prev => prev.filter(t => t.id !== id));
-    };
+    }
+
+    // optimistic — flip status immediately, roll back on failure
+    async function startTask(id: string) {
+        setTasks(prev => prev.map(t =>
+            t.id === id ? { ...t, status: 'STARTED' as any } : t
+        ));
+        try {
+            const t = await taskService.startTask(id);
+            setTasks(prev => patch(prev, id, t));
+            return t;
+        } catch (err) {
+            await loadTasks(); // rollback
+            throw err;
+        }
+    }
 
     const approveTask = async (id: string) => {
-        const updated = await taskService.approveTask(id);
-        setTasks(prev => prev.map(t => t.id === id ? updated : t));
-        return updated;
+        const t = await taskService.approveTask(id);
+        setTasks(prev => patch(prev, id, t));
+        return t;
     };
 
-    const rejectTask = async (id: string, reason?: string) => {
-        const updated = await taskService.rejectTask(id, reason);
-        setTasks(prev => prev.map(t => t.id === id ? updated : t));
-        return updated;
+    const rejectTask = async (id: string, reason: string) => {
+        const t = await taskService.rejectTask(id, reason);
+        setTasks(prev => patch(prev, id, t));
+        return t;
     };
 
-    const startTask = async (id: string) => {
-        const updated = await taskService.startTask(id);
-        setTasks(prev => prev.map(t => t.id === id ? updated : t));
-        return updated;
-    };
-
-    const completeTask = async (id: string) => {
-        const updated = await taskService.completeTask(id);
-        setTasks(prev => prev.map(t => t.id === id ? updated : t));
-        return updated;
-    };
+    // don't patch local state here, the SSE event will trigger a reload anyway
+    async function completeTask(id: string, note: string) {
+        const t = await taskService.completeTask(id, note);
+        return t;
+    }
 
     useEffect(() => {
-        if (autoLoad) loadTasks();
-    }, [autoLoad, loadTasks]);
+        let cancelled = false;
+        if (autoLoad) {
+            loadTasks().then(() => {
+                if (cancelled) setTasks([]); // cleanup if unmounted mid-flight
+            });
+        }
+        return () => { cancelled = true; };
+    }, [autoLoad]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return {
-        tasks: filteredTasks,
-        isLoading,
-        error,
-        loadTasks,
-        createTask,
-        updateTask,
-        deleteTask,
-        approveTask,
-        rejectTask,
-        startTask,
-        completeTask,
+        tasks: filtered, loading, error,
+        loadTasks, createTask, updateTask, deleteTask,
+        approveTask, rejectTask, startTask, completeTask,
     };
 }

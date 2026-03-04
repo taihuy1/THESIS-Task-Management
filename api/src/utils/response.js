@@ -1,34 +1,11 @@
-// Standardized response helpers (success / error / 201 / 204)
+function ok(res, data, statusCode = 200) {
+    return res.status(statusCode).json({ ok: true, data });
+}
 
-const successResponse = (res, data, message = 'Success', statusCode = 200) => {
-    return res.status(statusCode).json({
-        success: true,
-        message,
-        data,
-        timestamp: new Date().toISOString()
-    });
+const fail = (res, message, statusCode = 500, errors = null) => {
+    const body = { success: false, message };
+    if (errors) body.errors = errors;
+    return res.status(statusCode).json(body);
 };
 
-const errorResponse = (res, message, statusCode = 500, errors = null) => {
-    return res.status(statusCode).json({
-        success: false,
-        message,
-        errors,
-        timestamp: new Date().toISOString()
-    });
-};
-
-const createdResponse = (res, data, message = 'Created successfully') => {
-    return successResponse(res, data, message, 201);
-};
-
-const noContentResponse = (res) => {
-    return res.status(204).send();
-};
-
-module.exports = {
-    successResponse,
-    errorResponse,
-    createdResponse,
-    noContentResponse
-};
+module.exports = { ok, fail };

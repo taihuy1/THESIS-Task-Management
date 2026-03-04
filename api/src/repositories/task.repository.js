@@ -1,85 +1,48 @@
-// Task DB queries
 const { prisma } = require('../config/database.config');
 
-const create = async (taskData) => {
-    return prisma.task.create({
-        data: taskData,
-        include: {
-            solver: { select: { id: true, name: true, email: true } },
-            author: { select: { id: true, name: true, email: true } },
-        },
-    });
+// TODO: only include solver fields the frontend actually uses
+const _inc = {
+    solver: { select: { id: true, name: true, email: true } },
+    author: { select: { id: true, name: true, email: true } },
 };
 
-const findById = async (taskId) => {
-    return prisma.task.findUnique({
-        where: { id: taskId }
-    });
-};
+function create(data) {
+    return prisma.task.create({ data, include: _inc });
+}
 
-// Authors see their tasks, Solvers see assigned tasks
-const findByRole = async (userId, role) => {
-    const normalizedRole = role.toUpperCase();
-    const whereClause = normalizedRole === 'AUTHOR'
-        ? { authorId: userId }
-        : { solverId: userId };
+const findById = (id) =>
+    prisma.task.findUnique({ where: { id } });
+
+const findByRole = (userId, role) => {
+    const where = role.toUpperCase() === 'AUTHOR'
+        ? { authorId: userId } : { solverId: userId };
 
     return prisma.task.findMany({
-        where: whereClause,
-        include: {
-            solver: { select: { id: true, name: true, email: true } },
-            author: { select: { id: true, name: true, email: true } },
-        },
+        where,
+        include: _inc,
         orderBy: { createdAt: 'desc' },
     });
 };
 
-const update = async (taskId, updateData) => {
-    return prisma.task.update({
-        where: { id: taskId },
-        data: updateData,
-        include: {
-            solver: { select: { id: true, name: true, email: true } },
-            author: { select: { id: true, name: true, email: true } },
-        },
-    });
-};
+const update = (id, data) =>
+    prisma.task.update({ where: { id }, data, include: _inc });
 
-const deleteById = async (taskId) => {
-    return prisma.task.delete({
-        where: { id: taskId }
-    });
-};
+const deleteById = (id) =>
+    prisma.task.delete({ where: { id } });
 
-const isAuthor = async (taskId, userId) => {
-    const task = await prisma.task.findUnique({
-        where: { id: taskId },
-        select: { authorId: true }
-    });
-    return task?.authorId === userId;
-};
-
+async function isAuthor(taskId, userId) {
+    const t = await prisma.task.findUnique({ where: { id: taskId }, select: { authorId: true } });
+    return t?.authorId === userId;
+}
 const isSolver = async (taskId, userId) => {
-    const task = await prisma.task.findUnique({
-        where: { id: taskId },
-        select: { solverId: true }
-    });
-    return task?.solverId === userId;
+    const row = await prisma.task.findUnique({ where: { id: taskId }, select: { solverId: true } });
+    return row?.solverId === userId;
 };
 
-const findByIdAndAuthor = async (taskId, authorId) => {
-    return prisma.task.findFirst({
-        where: { id: taskId, authorId }
-    });
-};
+const findByIdAndAuthor = (taskId, authorId) =>
+    prisma.task.findFirst({ where: { id: taskId, authorId } });
 
 module.exports = {
-    create,
-    findById,
-    findByRole,
-    update,
-    deleteById,
-    isAuthor,
-    isSolver,
-    findByIdAndAuthor
+    create, findById, findByRole, update,
+    deleteById, isAuthor, isSolver, findByIdAndAuthor
 };

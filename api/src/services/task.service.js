@@ -1,196 +1,168 @@
-/*
-  task.service.js
-  Core business logic for the task lifecycle.
-  Workflow: PENDING -> STARTED -> COMPLETED -> APPROVED (or back to STARTED on reject).
-  Every state change pushes an SSE event so both dashboards update in real time.
-*/
-
-const taskRepository = require('../repositories/task.repository');
-const notificationRepository = require('../repositories/notification.repository');
-const userRepository = require('../repositories/user.repository');
-const { NotFoundError, BadRequestError, AuthorizationError } = require('../utils/errors');
+const taskRepo = require('../repositories/task.repository');
+const notifRepo = require('../repositories/notifRepo');
+const userRepo = require('../repositories/user.repository');
+const { NotFoundError, BadRequestError, AccessError } = require('../utils/errors');
 const { isValidTransition, TASK_STATUS, NOTIFICATION_TYPES, ROLES } = require('../utils/constants');
 const logger = require('../utils/logger');
 const { sendEvent } = require('../lib/sseClients');
 
-// Fetch tasks visible to a given user (authors see created, solvers see assigned).
-const getTasksByRole = async (userId, role) => {
-  return taskRepository.findByRole(userId, role);
-};
+const getTasksByRole = (userId, role) => taskRepo.findByRole(userId, role);
 
-// Fetch a single task by its ID.
-const getTaskById = async (taskId) => {
-  const task = await taskRepository.findById(taskId);
-  if (!task) throw new NotFoundError('Task');
+async function getTaskById(id) {
+  const task = await taskRepo.findById(id);
+  if (!task) throw new NotFoundError('task');
   return task;
-};
+}
 
-// Create a new task assigned to exactly one solver.
-const createTask = async (taskData, authorId) => {
-  const { title, desc, solvers, dueDate, priority } = taskData;
-  const [solverId] = solvers;
+// validates solver exists & has correct role before creating
+async function createTask(body, authorId) {
+  const { title, desc, solvers, dueDate, priority } = body;
+  const [sid] = solvers;
 
-  const solver = await userRepository.findById(solverId);
-  if (!solver || solver.role !== ROLES.SOLVER) {
-    throw new BadRequestError('Invalid solver ID');
-  }
+  logger.debug('createTask called', { title, authorId, sid });
 
-  const task = await taskRepository.create({
-    title,
-    description: desc,
-    authorId,
-    solverId,
+  const solver = await userRepo.findById(sid);
+  if (!solver || solver.role !== ROLES.SOLVER)
+    throw new BadRequestError('invalid solver');
+
+  logger.debug('solver validated, creating task record...');
+
+  const task = await taskRepo.create({
+    title, description: desc, authorId, solverId: sid,
     status: TASK_STATUS.PENDING,
     priority: priority || 'MEDIUM',
     ...(dueDate && { dueDate: new Date(dueDate) }),
   });
 
-  await notificationRepository.create({
-    userId: solverId,
-    taskId: task.id,
+  await notifRepo.create({
+    userId: sid, taskId: task.id,
     type: NOTIFICATION_TYPES.TASK_ASSIGNED,
-    message: `You have been assigned a new task: ${title}`,
+    message: `New task assigned: ${title}`,
   });
+  logger.info('task:create', { id: task.id, authorId, sid });
 
-  logger.info(`Task created: "${title}"`, { taskId: task.id, authorId, solverId, dueDate });
-
-  sendEvent(solverId, 'task-update', { taskId: task.id, action: 'created' });
-  sendEvent(solverId, 'notification', { taskId: task.id });
-
+  sendEvent(sid, 'task-update', { taskId: task.id, action: 'created' });
+  sendEvent(sid, 'notification', { taskId: task.id });
   return task;
-};
+}
 
-// Generic update — validates status transitions and persists changes.
-const updateTask = async (taskId, updateData, userId) => {
-  const task = await taskRepository.findById(taskId);
-  if (!task) throw new NotFoundError('Task');
+async function updateTask(taskId, patch, userId) {
+  const task = await taskRepo.findById(taskId);
+  if (!task) throw new NotFoundError('task');
 
-  if (updateData.status && updateData.status !== task.status) {
-    if (!isValidTransition(task.status, updateData.status)) {
-      throw new BadRequestError(`Invalid status transition from "${task.status}" to "${updateData.status}"`);
-    }
+  if (patch.status && patch.status !== task.status &&
+    !isValidTransition(task.status, patch.status)) {
+    throw new BadRequestError(`bad transition ${task.status} -> ${patch.status}`);
   }
 
-  // The frontend sends "desc" but Prisma expects "description"
-  if (updateData.desc !== undefined) {
-    updateData.description = updateData.desc;
-    delete updateData.desc;
+  if (patch.desc !== undefined) {
+    patch.description = patch.desc;
+    delete patch.desc;
   }
+  if (patch.dueDate) patch.dueDate = new Date(patch.dueDate);
 
-  // Convert ISO string to Date object for Prisma
-  if (updateData.dueDate) {
-    updateData.dueDate = new Date(updateData.dueDate);
-  }
+  const prevSolver = task.solverId;
+  const updated = await taskRepo.update(taskId, patch);
+  logger.info('task:update', { taskId, fields: Object.keys(patch) });
 
-  const updatedTask = await taskRepository.update(taskId, updateData);
-  logger.info(`Task updated: ${taskId}`, { updatedFields: Object.keys(updateData), userId });
-  return updatedTask;
-};
+  if (updated.solverId) sendEvent(updated.solverId, 'task-update', { taskId, action: 'updated' });
+  if (prevSolver && prevSolver !== updated.solverId)
+    sendEvent(prevSolver, 'task-update', { taskId, action: 'reassigned' });
+  sendEvent(task.authorId, 'task-update', { taskId, action: 'updated' });
 
-// Solver begins work on a task (PENDING -> STARTED).
-const startTask = async (taskId, solverId) => {
-  const task = await taskRepository.findById(taskId);
-  if (!task) throw new NotFoundError('Task');
-  if (task.solverId !== solverId) throw new AuthorizationError('You are not assigned to this task');
-  if (task.status !== TASK_STATUS.PENDING) throw new BadRequestError(`Cannot start task with status "${task.status}"`);
+  return updated;
+}
 
-  const updatedTask = await taskRepository.update(taskId, { status: TASK_STATUS.STARTED });
-  logger.info(`Task started: ${taskId}`, { solverId });
+async function startTask(taskId, solverId) {
+  const task = await taskRepo.findById(taskId);
+  if (!task) throw new NotFoundError('task');
+  if (task.solverId !== solverId) throw new AccessError('not assigned', 403);
+  if (task.status !== TASK_STATUS.PENDING)
+    throw new BadRequestError(`cant start, status is ${task.status}`);
+
+  const updated = await taskRepo.update(taskId, { status: TASK_STATUS.STARTED });
+  logger.info('task:start', { taskId, solverId });
   sendEvent(task.authorId, 'task-update', { taskId, action: 'started' });
-  return updatedTask;
-};
+  return updated;
+}
 
-// Solver marks work as done (STARTED -> COMPLETED).
-const completeTask = async (taskId, solverId) => {
-  const task = await taskRepository.findById(taskId);
-  if (!task) throw new NotFoundError('Task');
-  if (task.solverId !== solverId) throw new AuthorizationError('You are not assigned to this task');
-  if (task.status !== TASK_STATUS.STARTED) throw new BadRequestError(`Cannot complete task with status "${task.status}"`);
+async function completeTask(taskId, solverId, completionNote) {
+  const task = await taskRepo.findById(taskId);
+  if (!task) throw new NotFoundError('task');
+  if (task.solverId !== solverId) throw new AccessError('not assigned to you', 403);
+  if (task.status !== TASK_STATUS.STARTED)
+    throw new BadRequestError(`cant complete, status is ${task.status}`);
 
-  const updatedTask = await taskRepository.update(taskId, { status: TASK_STATUS.COMPLETED });
-
-  await notificationRepository.create({
-    userId: task.authorId,
-    taskId: task.id,
-    type: NOTIFICATION_TYPES.TASK_COMPLETED,
-    message: `Task "${task.title}" has been completed and awaits your approval`,
+  const res = await taskRepo.update(taskId, {
+    status: TASK_STATUS.COMPLETED, completionNote,
   });
 
-  logger.info(`Task completed: ${taskId}`, { solverId });
+  await notifRepo.create({
+    userId: task.authorId, taskId: task.id,
+    type: NOTIFICATION_TYPES.TASK_COMPLETED,
+    message: `"${task.title}" completed, needs review`,
+  });
+  logger.info('task:complete', { taskId, solverId });
   sendEvent(task.authorId, 'task-update', { taskId, action: 'completed' });
   sendEvent(task.authorId, 'notification', { taskId });
-  return updatedTask;
-};
+  return res;
+}
 
-// Author approves finished work (COMPLETED -> APPROVED).
 const approveTask = async (taskId, authorId) => {
-  const task = await taskRepository.findByIdAndAuthor(taskId, authorId);
-  if (!task) throw new NotFoundError('Task not found or access denied');
-  if (task.status !== TASK_STATUS.COMPLETED) throw new BadRequestError(`Cannot approve task with status "${task.status}"`);
+  const task = await taskRepo.findByIdAndAuthor(taskId, authorId);
+  if (!task) throw new NotFoundError('task');
+  if (task.status !== TASK_STATUS.COMPLETED)
+    throw new BadRequestError(`cant approve, status is ${task.status}`);
 
-  const updatedTask = await taskRepository.update(taskId, { status: TASK_STATUS.APPROVED });
-
-  await notificationRepository.create({
-    userId: task.solverId,
-    taskId: task.id,
+  const out = await taskRepo.update(taskId, { status: TASK_STATUS.APPROVED });
+  await notifRepo.create({
+    userId: task.solverId, taskId: task.id,
     type: NOTIFICATION_TYPES.TASK_APPROVED,
-    message: `Your task "${task.title}" has been approved!`,
+    message: `"${task.title}" approved`,
   });
-
-  logger.info(`Task approved: ${taskId}`, { authorId });
+  logger.info('task:approve', { taskId, authorId });
   sendEvent(task.solverId, 'task-update', { taskId, action: 'approved' });
   sendEvent(task.solverId, 'notification', { taskId });
-  return updatedTask;
+  return out;
 };
 
-// Author sends work back for revision (COMPLETED -> STARTED).
-const rejectTask = async (taskId, authorId, reason = null) => {
-  const task = await taskRepository.findByIdAndAuthor(taskId, authorId);
-  if (!task) throw new NotFoundError('Task not found or access denied');
-  if (task.status !== TASK_STATUS.COMPLETED) throw new BadRequestError(`Cannot reject task with status "${task.status}"`);
+async function rejectTask(taskId, authorId, reason) {
+  const task = await taskRepo.findByIdAndAuthor(taskId, authorId);
+  if (!task) throw new NotFoundError('task');
+  if (task.status !== TASK_STATUS.COMPLETED)
+    throw new BadRequestError('task not in completed state');
 
-  const updatedTask = await taskRepository.update(taskId, { status: TASK_STATUS.STARTED });
-
-  const message = reason
-    ? `Your task "${task.title}" was rejected. Reason: ${reason}. Please revise and resubmit.`
-    : `Your task "${task.title}" was rejected. Please revise and resubmit.`;
-
-  await notificationRepository.create({
-    userId: task.solverId,
-    taskId: task.id,
-    type: NOTIFICATION_TYPES.TASK_REJECTED,
-    message,
+  const res = await taskRepo.update(taskId, {
+    status: TASK_STATUS.STARTED,
+    rejectionReason: reason, completionNote: null,
   });
+  await notifRepo.create({
+    userId: task.solverId, taskId: task.id,
+    type: NOTIFICATION_TYPES.TASK_REJECTED,
+    message: `"${task.title}" rejected — ${reason}`,
+  });
+  logger.info('task:reject', { taskId, authorId, reason });
 
-  logger.info(`Task rejected: ${taskId}`, { authorId, reason });
   sendEvent(task.solverId, 'task-update', { taskId, action: 'rejected' });
   sendEvent(task.solverId, 'notification', { taskId });
-  return updatedTask;
-};
+  return res;
+}
 
-// Author permanently removes a task and its related notifications.
-const deleteTask = async (taskId, authorId) => {
-  const task = await taskRepository.findByIdAndAuthor(taskId, authorId);
-  if (!task) throw new NotFoundError('Task not found or access denied');
+async function deleteTask(taskId, authorId) {
+  const task = await taskRepo.findByIdAndAuthor(taskId, authorId);
+  if (!task) throw new NotFoundError('Task');
 
-  await notificationRepository.deleteByTaskId(taskId);
-  await taskRepository.deleteById(taskId);
+  // cleanup notifications first, then the task itself
+  const deletedNotifs = await notifRepo.deleteByTaskId(taskId);
+  logger.debug('deleted notifs for task', { taskId, count: deletedNotifs?.count });
+  await taskRepo.deleteById(taskId);
+  logger.info('task:delete', { taskId, authorId });
 
-  logger.info(`Task deleted: ${taskId}`, { authorId });
-
-  if (task.solverId) {
+  if (task.solverId)
     sendEvent(task.solverId, 'task-update', { taskId, action: 'deleted' });
-  }
-};
+}
 
 module.exports = {
-  getTasksByRole,
-  getTaskById,
-  createTask,
-  updateTask,
-  startTask,
-  completeTask,
-  approveTask,
-  rejectTask,
-  deleteTask,
+  getTasksByRole, getTaskById, createTask, updateTask,
+  startTask, completeTask, approveTask, rejectTask, deleteTask,
 };

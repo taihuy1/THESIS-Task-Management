@@ -1,9 +1,4 @@
-/*
-  dashboard.css
-  Styles for the task table, toolbar, detail panel, and edit form.
-  Shared between Author and Solver dashboards.
-*/
-
+/* toolbar and filter controls */
 .toolbar {
   display: flex;
   align-items: center;
@@ -132,6 +127,7 @@
   width: 100%;
 }
 
+/* task table and row states */
 .task-table {
   width: 100%;
   border-collapse: collapse;
@@ -192,7 +188,6 @@
   color: #6b7280;
 }
 
-/* Status pill inside table cells */
 .status-pill {
   display: inline-block;
   padding: 2px 10px;
@@ -200,6 +195,7 @@
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
+  color: #333;
 }
 
 .priority-text {
@@ -207,6 +203,7 @@
   font-size: 13px;
 }
 
+/* detail panel & edit form */
 .detail-panel {
   margin-top: 16px;
   padding: 20px 24px;
@@ -218,6 +215,7 @@
 .detail-panel h3 {
   margin: 0 0 16px;
   font-size: 20px;
+  margin-top: -2px; /* nudge it up a bit */
 }
 
 .detail-grid {
@@ -363,4 +361,240 @@
   display: flex;
   gap: 8px;
   margin-top: 16px;
+}
+
+.inline-prompt {
+  margin: 16px 0;
+  padding: 14px 16px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.inline-prompt label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.inline-prompt textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  resize: vertical;
+  min-height: 72px;
+  box-sizing: border-box;
+}
+
+.inline-prompt textarea:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.inline-prompt-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.inline-prompt-actions button {
+  font-size: 13px;
+  padding: 6px 14px;
+}
+
+.inline-prompt-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── lifecycle stepper ── */
+.lifecycle-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 20px;
+  padding: 12px 0;
+}
+
+.lifecycle-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 1;
+}
+
+.step-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #d1d5db;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #9ca3af;
+  z-index: 1;
+  transition: all 0.2s;
+}
+
+.lifecycle-step.done .step-dot {
+  background: #10b981;
+  border-color: #10b981;
+  color: #fff;
+}
+
+.lifecycle-step.active .step-dot {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+.lifecycle-step.rejected .step-dot {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+
+.step-label {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #9ca3af;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.lifecycle-step.done .step-label { color: #10b981; }
+.lifecycle-step.active .step-label { color: #2563eb; font-weight: 600; }
+.lifecycle-step.rejected .step-label { color: #dc2626; }
+
+.step-connector {
+  flex: 1;
+  height: 2px;
+  background: #d1d5db;
+  align-self: flex-start;
+  margin-top: 14px;
+}
+
+.step-connector.filled {
+  background: #10b981;
+}
+
+/* ── responsive layout ── */
+@media (max-width: 1024px) {
+  .dashboard-layout {
+    flex-direction: column;
+  }
+
+  .creation-panel {
+    flex: none;
+    width: 100%;
+    max-height: none;
+  }
+
+  .detail-grid {
+    gap: 10px 20px;
+  }
+
+  .edit-form .form-grid {
+    gap: 10px 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .edit-form .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .edit-form .form-field.full-width {
+    grid-column: 1;
+  }
+
+  .task-table th,
+  .task-table td {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .toolbar select {
+    min-width: 100%;
+  }
+
+  .detail-actions {
+    flex-wrap: wrap;
+  }
+
+  .lifecycle-stepper {
+    padding: 8px 0;
+  }
+
+  .step-dot {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .step-label {
+    font-size: 10px;
+  }
+
+  .step-connector {
+    margin-top: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .task-table {
+    font-size: 12px;
+  }
+
+  .task-table th:nth-child(n+5),
+  .task-table td:nth-child(n+5) {
+    display: none;
+  }
+
+  .creation-panel {
+    padding: 14px;
+  }
+
+  .detail-panel {
+    padding: 14px 16px;
+  }
+
+  .status-pill {
+    font-size: 11px;
+    padding: 1px 8px;
+  }
+
+  .inline-prompt {
+    padding: 10px 12px;
+  }
+
+  .lifecycle-step {
+    flex: none;
+  }
+
+  .lifecycle-stepper {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
 }

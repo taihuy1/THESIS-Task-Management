@@ -1,12 +1,7 @@
-/*
-  TaskCreationForm.tsx
-  Form for Authors to create a new task. Includes title, description,
-  solver assignment, priority, and an optional deadline picker.
-*/
-
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { CreateTaskPayload, Priority } from '@/types/task.types';
-import { useSolvers } from '@/hooks/useSolvers';
+import { User } from '@/types/user.types';
+import apiClient from '@/services/api/client';
 
 interface Props {
   onSubmit: (payload: CreateTaskPayload) => Promise<unknown>;
@@ -16,14 +11,25 @@ interface Props {
 export default function TaskCreationForm({ onSubmit, onCancel }: Props) {
   const [title, setTitle] = useState('');
   const [desc, setDesc] = useState('');
-  const [priority, setPriority] = useState<Priority>(Priority.MEDIUM);
+  const [priority, setPriority] = useState<Priority>('MEDIUM');
   const [dueDateTime, setDueDateTime] = useState('');
   const [solverId, setSolverId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { solvers, error: solverError } = useSolvers();
+  const [solvers, setSolvers] = useState<User[]>([]);
+  const [solverError, setSolverError] = useState<string | null>(null);
 
-  // Prevent selecting a past deadline
-  const minDateTime = new Date().toISOString().slice(0, 16);
+  // fetch solvers on mount
+  useEffect(() => {
+    let stale = false;
+    apiClient.get('/users').then(({ data }) => {
+      if (!stale) setSolvers(data.data);
+    }).catch(() => {
+      if (!stale) setSolverError('could not load solvers');
+    });
+    return () => { stale = true; };
+  }, []);
+
+  const minDateTime = new Date().toISOString().slice(0, 16); // TODO: should respect user tz
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -41,14 +47,13 @@ export default function TaskCreationForm({ onSubmit, onCancel }: Props) {
         ...(dueDateISO && { dueDate: dueDateISO }),
       });
 
-      // Reset form after successful creation
       setTitle('');
       setDesc('');
-      setPriority(Priority.MEDIUM);
+      setPriority('MEDIUM');
       setDueDateTime('');
       setSolverId('');
     } catch (err) {
-      console.error('Failed to create task:', err);
+      console.error('create failed:', err);
     } finally {
       setIsSubmitting(false);
     }
@@ -83,9 +88,9 @@ export default function TaskCreationForm({ onSubmit, onCancel }: Props) {
         <div>
           <label htmlFor="priority">Priority</label>
           <select id="priority" value={priority} onChange={e => setPriority(e.target.value as Priority)}>
-            <option value={Priority.LOW}>Low</option>
-            <option value={Priority.MEDIUM}>Medium</option>
-            <option value={Priority.HIGH}>High</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
           </select>
         </div>
 

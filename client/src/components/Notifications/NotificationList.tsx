@@ -1,7 +1,7 @@
-import { Notification } from '@/types/notification.types';
+// notification shape comes from useNotifications hook
 
 interface Props {
-    notifications: Notification[];
+    notifications: any[];
     onMarkRead: (id: string) => Promise<unknown>;
     onMarkAllRead: () => Promise<unknown>;
 }

@@ -1,44 +1,24 @@
-// Auth controller — login, register, logout
 const authService = require('../services/auth.service');
-const { successResponse, createdResponse, errorResponse } = require('../utils/response');
+const { ok } = require('../utils/response');
 const logger = require('../utils/logger');
 
-const login = async (req, res, next) => {
-    try {
-        const { email, password } = req.body;
-
-        const result = await authService.login(email, password);
-
-        return successResponse(res, result, 'Login successful');
-    } catch (error) {
-        next(error);
-    }
-};
+async function login(req, res, next) {
+    const { email, password } = req.body;
+    const data = await authService.login(email, password).catch(next);
+    if (data) return ok(res, data);
+}
 
 const register = async (req, res, next) => {
     try {
         const { email, password, role, name } = req.body;
-
         const user = await authService.register(email, password, role, name);
-
-        return createdResponse(res, user, 'User registered successfully');
-    } catch (error) {
-        next(error);
-    }
+        return res.status(201).json({ ok: true, data: user });
+    } catch (err) { next(err); }
 };
 
-const logout = async (req, res, next) => {
-    try {
-        logger.info('User logged out', { userId: req.user?.id });
-
-        return successResponse(res, null, 'Logged out successfully');
-    } catch (error) {
-        next(error);
-    }
+const logout = (req, res) => {
+    logger.info('logout', { userId: req.user?.id });
+    res.json({ success: true, data: null });
 };
 
-module.exports = {
-    login,
-    register,
-    logout
-};
+module.exports = { login, register, logout };

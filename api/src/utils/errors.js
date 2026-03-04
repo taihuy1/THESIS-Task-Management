@@ -1,64 +1,40 @@
-// Custom error classes with HTTP status codes
-
+// got tired of writing status codes everywhere so made these
 class AppError extends Error {
     constructor(message, statusCode = 500, errors = null) {
         super(message);
         this.statusCode = statusCode;
         this.errors = errors;
-        this.isOperational = true; // Distinguishes from programming errors
-
-        Error.captureStackTrace(this, this.constructor);
+        this.isOperational = true;
     }
 }
 
-class AuthenticationError extends AppError {
-    constructor(message = 'Authentication failed') {
-        super(message, 401);
-        this.name = 'AuthenticationError';
-    }
-}
-
-class AuthorizationError extends AppError {
-    constructor(message = 'Access denied') {
-        super(message, 403);
-        this.name = 'AuthorizationError';
+// covers both 401 and 403 depending on what happened
+class AccessError extends AppError {
+    constructor(msg = 'access denied', statusCode = 401) {
+        super(msg, statusCode);
+        this.name = 'AccessError';
     }
 }
 
 class NotFoundError extends AppError {
-    constructor(resource = 'Resource') {
+    constructor(resource = 'resource') {
         super(`${resource} not found`, 404);
         this.name = 'NotFoundError';
-    }
-}
-
-class ValidationError extends AppError {
-    constructor(message = 'Validation failed', errors = []) {
-        super(message, 422, errors);
-        this.name = 'ValidationError';
-    }
-}
-
-class ConflictError extends AppError {
-    constructor(message = 'Resource conflict') {
-        super(message, 409);
-        this.name = 'ConflictError';
+        this.resource = resource;
     }
 }
 
 class BadRequestError extends AppError {
-    constructor(message = 'Bad request') {
-        super(message, 400);
+    constructor(msg = 'bad request', details = null) {
+        super(msg, 400);
         this.name = 'BadRequestError';
+        if (details) this.details = details;
     }
 }
 
 module.exports = {
     AppError,
-    AuthenticationError,
-    AuthorizationError,
+    AccessError,
     NotFoundError,
-    ValidationError,
-    ConflictError,
     BadRequestError
 };

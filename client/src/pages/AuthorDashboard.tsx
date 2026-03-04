@@ -1,9 +1,3 @@
-/*
-  AuthorDashboard.tsx
-  Main view for Authors. Toolbar with actions at the top, tasks in a
-  sortable table, and a detail/edit panel below for the selected task.
-*/
-
 import { useState } from 'react';
 import { useTasks } from '@/hooks/useTasks';
 import { useSSE } from '@/hooks/useSSE';
@@ -23,7 +17,7 @@ export default function AuthorDashboard() {
   const [editing, setEditing] = useState(false);
 
   const {
-    tasks, loadTasks, createTask, updateTask, deleteTask, approveTask, rejectTask, isLoading, error,
+    tasks, loadTasks, createTask, updateTask, deleteTask, approveTask, rejectTask, loading, error,
   } = useTasks({ statusFilter: filter });
 
   useSSE({ onTaskUpdate: loadTasks });
@@ -56,9 +50,8 @@ export default function AuthorDashboard() {
         </div>
       </header>
 
-      {error && <div style={{ color: 'red', padding: '12px', backgroundColor: '#fee', borderRadius: '4px', marginBottom: '16px' }}>{error}</div>}
+      {error && <p style={{ color: '#b91c1c', background: '#fef2f2', padding: '10px 14px', borderRadius: '4px', margin: '0 0 16px' }}>{error}</p>}
 
-      {/* Toolbar — all actions directly under the title */}
       <div className="toolbar">
         <button onClick={() => { setShowForm(!showForm); setEditing(false); }}>
           {showForm ? 'Cancel' : '+ New Task'}
@@ -72,7 +65,6 @@ export default function AuthorDashboard() {
         </select>
       </div>
 
-      {/* Side-by-side layout: form on left, table on right */}
       <div className={showForm ? 'dashboard-layout' : ''}>
         {showForm && (
           <div className="creation-panel">
@@ -81,13 +73,12 @@ export default function AuthorDashboard() {
         )}
 
         <div className={showForm ? 'tables-wrapper' : ''}>
-          {isLoading ? (
+          {loading ? (
             <p>Loading tasks...</p>
           ) : (
             <TaskTable tasks={tasks} selectedId={selectedId} onSelect={setSelectedId} role="AUTHOR" />
           )}
 
-          {/* Detail or edit panel below the table */}
           {selectedTask && !editing && (
             <TaskDetailPanel
               task={selectedTask}

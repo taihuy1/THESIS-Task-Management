@@ -1,68 +1,28 @@
-// Winston logger setup
-const winston = require('winston');
-const path = require('path');
+// started with console.log everywhere, switched to winston for prod
+// but kept the console wrapper  because it's easier to read
+const isProd = process.env.NODE_ENV === 'production';
 
-const { NODE_ENV } = require('../config/app.config');
+let logger;
 
-// Log format
-const logFormat = winston.format.combine(
-    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-    winston.format.errors({ stack: true }),
-    winston.format.printf(({ level, message, timestamp, stack, ...meta }) => {
-        let log = `${timestamp} [${level.toUpperCase()}]: ${message}`;
-        if (Object.keys(meta).length > 0) {
-            log += ` ${JSON.stringify(meta)}`;
-        }
-        if (stack) {
-            log += `\n${stack}`;
-        }
-        return log;
-    })
-);
-
-const logger = winston.createLogger({
-    level: NODE_ENV === 'production' ? 'info' : 'debug',
-    format: logFormat,
-    transports: [
-        // Console transport (always enabled)
-        new winston.transports.Console({
-            format: winston.format.combine(
-                winston.format.colorize(),
-                logFormat
-            )
-        })
-    ]
-});
-
-// Add file transports in production
-if (NODE_ENV === 'production') {
-    logger.add(new winston.transports.File({
-        filename: path.join(__dirname, '../../logs/error.log'),
-        level: 'error',
-        maxsize: 5242880, // 5MB
-        maxFiles: 5
-    }));
-
-    logger.add(new winston.transports.File({
-        filename: path.join(__dirname, '../../logs/combined.log'),
-        maxsize: 5242880, // 5MB
-        maxFiles: 5
-    }));
+if (isProd) {
+    const winston = require('winston');
+    logger = winston.createLogger({
+        level: 'info',
+        format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.json()
+        ),
+        transports: [new winston.transports.Console()],
+    });
+} else {
+    // dev mode — just console with a tag, good enough
+    const tag = (lvl) => `[${lvl}]`;
+    logger = {
+        info:  (...args) => console.log(tag('info'), ...args),
+        warn:  (...args) => console.warn(tag('WARN'), ...args),
+        error: (...args) => console.error(tag('ERR'), ...args),
+        debug: (...args) => console.debug(tag('dbg'), ...args),
+    };
 }
-
-// Helper methods for structured logging
-logger.logRequest = (req) => {
-    logger.info(`${req.method} ${req.originalUrl}`, {
-        ip: req.ip,
-        userId: req.user?.id || 'anonymous'
-    });
-};
-
-logger.logError = (error, context = {}) => {
-    logger.error(error.message, {
-        ...context,
-        stack: error.stack
-    });
-};
 
 module.exports = logger;

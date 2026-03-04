@@ -1,18 +1,11 @@
-//
-const { authenticateToken, authorizeRole } = require('./auth.middleware');
-const { requireDatabase } = require('./db.middleware');
-const { errorHandler, notFoundHandler } = require('./error.middleware');
-const { requestLogger, devLogger } = require('./logger.middleware');
-const { validateRequest, validateParams } = require('./validation.middleware');
+const { authenticate, authorizeRole } = require('./auth.middleware');
+const { dbCheck } = require('./db.middleware');
+const { errorHandler, notFound } = require('./error.middleware');
+const { requestLogger } = require('./logger.middleware');
+const { validate, validateParams } = require('./validation.middleware');
 
 module.exports = {
-    authenticateToken,
-    authorizeRole,
-    requireDatabase,
-    errorHandler,
-    notFoundHandler,
-    requestLogger,
-    devLogger,
-    validateRequest,
-    validateParams
+    authenticate, authorizeRole, dbCheck,
+    errorHandler, notFound, requestLogger,
+    validate, validateParams
 };

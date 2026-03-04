@@ -1,12 +1,7 @@
-/*
-  TaskEditForm.tsx
-  Inline edit form for Authors to update a task's title, description,
-  priority, deadline, and solver. Replaces the detail panel while editing.
-*/
-
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { Task, Priority, UpdateTaskPayload } from '@/types/task.types';
-import { useSolvers } from '@/hooks/useSolvers';
+import { User } from '@/types/user.types';
+import apiClient from '@/services/api/client';
 import '@/styles/dashboard.css';
 
 interface Props {
@@ -22,8 +17,12 @@ export default function TaskEditForm({ task, onSave, onCancel }: Props) {
   const [dueDateTime, setDueDateTime] = useState(task.dueDate ? toLocalInput(task.dueDate) : '');
   const [solverId, setSolverId] = useState(task.solverId || '');
   const [saving, setSaving] = useState(false);
+  const [solvers, setSolvers] = useState<User[]>([]);
 
-  const { solvers } = useSolvers();
+  useEffect(() => {
+    // grab solvers for the dropdown — not worth a custom hook for this
+    apiClient.get('/users').then(res => setSolvers(res.data.data)).catch(() => {});
+  }, []);
   const minDateTime = new Date().toISOString().slice(0, 16);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -32,20 +31,12 @@ export default function TaskEditForm({ task, onSave, onCancel }: Props) {
 
     try {
       const payload: UpdateTaskPayload = { title, desc, priority };
-
-      // Only send dueDate if changed or set
-      if (dueDateTime) {
-        (payload as any).dueDate = new Date(dueDateTime).toISOString();
-      }
-
-      // Only send solverId if changed
-      if (solverId && solverId !== task.solverId) {
-        payload.solverId = solverId;
-      }
+      if (dueDateTime) (payload as any).dueDate = new Date(dueDateTime).toISOString();
+      if (solverId && solverId !== task.solverId) payload.solverId = solverId;
 
       await onSave(task.id, payload);
     } catch (err) {
-      console.error('Failed to update task:', err);
+      console.error('edit failed:', err);
     } finally {
       setSaving(false);
     }
@@ -64,9 +55,9 @@ export default function TaskEditForm({ task, onSave, onCancel }: Props) {
         <div className="form-field">
           <label htmlFor="edit-priority">Priority</label>
           <select id="edit-priority" value={priority} onChange={e => setPriority(e.target.value as Priority)}>
-            <option value={Priority.LOW}>Low</option>
-            <option value={Priority.MEDIUM}>Medium</option>
-            <option value={Priority.HIGH}>High</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
           </select>
         </div>
 
@@ -107,7 +98,7 @@ export default function TaskEditForm({ task, onSave, onCancel }: Props) {
   );
 }
 
-// Converts an ISO date string to the "YYYY-MM-DDThh:mm" format for datetime-local input
+// format iso to local datetime input val
 function toLocalInput(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');

@@ -5,4 +5,4 @@ export const ROUTES = {
     AUTHOR_DASHBOARD: '/author',
     SOLVER_DASHBOARD: '/solver',
     TASK_DETAIL: '/tasks/:id',
-} as const;
+};

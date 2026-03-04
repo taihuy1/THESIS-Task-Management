@@ -1,10 +1,3 @@
-/*
-  TaskTable.tsx
-  Sortable task table shared by Author and Solver dashboards.
-  Rows are clickable — selecting a row surfaces the detail panel.
-  Due Date column toggles sort order (most recent first by default).
-*/
-
 import { useMemo, useState } from 'react';
 import { Task, TaskStatus, Priority } from '@/types/task.types';
 import { getStatusLabel, getStatusColor } from '@/utils/taskHelpers';
@@ -12,7 +5,7 @@ import { formatDeadlineDate } from '@/utils/deadlineHelpers';
 import TaskDeadlineDisplay from '@/components/Deadline/TaskDeadlineDisplay';
 import '@/styles/dashboard.css';
 
-type SortDir = 'asc' | 'desc';
+type SortDir = 'asc' | 'desc'; //  persist sort pref in localStorage
 
 interface Props {
   tasks: Task[];
@@ -21,12 +14,9 @@ interface Props {
   role: 'AUTHOR' | 'SOLVER';
 }
 
-const priorityWeight: Record<string, number> = { HIGH: 3, MEDIUM: 2, LOW: 1 };
-
 export default function TaskTable({ tasks, selectedId, onSelect, role }: Props) {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
-  // Sort by due date. Tasks without a deadline sink to the bottom.
   const sorted = useMemo(() => {
     return [...tasks].sort((a, b) => {
       const aTime = a.dueDate ? new Date(a.dueDate).getTime() : null;
@@ -61,7 +51,7 @@ export default function TaskTable({ tasks, selectedId, onSelect, role }: Props) 
       <tbody>
         {sorted.length === 0 ? (
           <tr className="empty-row">
-            <td colSpan={role === 'AUTHOR' ? 6 : 6}>No tasks found</td>
+            <td colSpan={6}>No tasks found</td>
           </tr>
         ) : (
           sorted.map(task => (

@@ -6,7 +6,6 @@ import NotificationList from './NotificationList';
 export default function NotificationBell() {
     const { notifications, unreadCount, loadNotifications, markRead, markAllRead } = useNotifications();
 
-    // Real-time: reload notifications when server pushes an event
     useSSE({ onNotification: loadNotifications });
     const [isOpen, setIsOpen] = useState(false);
 

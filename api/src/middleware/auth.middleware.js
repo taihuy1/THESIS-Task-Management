@@ -1,66 +1,37 @@
-// JWT authentication and role-based access control
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config/auth.config');
-const { errorResponse } = require('../utils/response');
+const { fail } = require('../utils/response');
 const logger = require('../utils/logger');
-const userRepository = require('../repositories/user.repository');
+const userRepo = require('../repositories/user.repository');
 
-// Verify JWT and attach user to req
-const authenticateToken = async (req, res, next) => {
+const authenticate = async (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization;
+        const hdr = req.headers.authorization;
+        if (!hdr || !hdr.startsWith('Bearer '))
+            return fail(res, 'token required', 401);
 
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return errorResponse(res, 'Authentication token required', 401);
-        }
-
-        const token = authHeader.substring(7); // Remove "Bearer "
-
-        const decoded = jwt.verify(token, JWT_SECRET);
-
-        // Verify user still exists in database
-        const user = await userRepository.findById(decoded.id);
-        if (!user) {
-            return errorResponse(res, 'User account not found. Please login again', 401);
-        }
-
-        // Attach user to request
+        const decoded = jwt.verify(hdr.substring(7), JWT_SECRET);
+        const user = await userRepo.findById(decoded.id);
+        if (!user) return fail(res, 'user not found', 401);
         req.user = decoded;
-
         next();
-    } catch (error) {
-        if (error.name === 'TokenExpiredError') {
-            return errorResponse(res, 'Token expired. Please login again', 401);
-        }
-        if (error.name === 'JsonWebTokenError') {
-            return errorResponse(res, 'Invalid token', 401);
-        }
-        logger.error('Authentication error:', error);
-        return errorResponse(res, 'Authentication failed', 401);
+    } catch (err) {
+        if (err.name === 'TokenExpiredError')
+            return fail(res, 'token expired', 401);
+        if (err.name === 'JsonWebTokenError')
+            return fail(res, 'bad token', 401);
+        logger.error('auth err', err);
+        return fail(res, 'auth failed', 401);
     }
 };
 
-const authorizeRole = (...allowedRoles) => {
-    return (req, res, next) => {
-        const userRole = req.user?.role;
-
-        if (!userRole || !allowedRoles.includes(userRole)) {
-            logger.warn(`Access denied for user ${req.user?.id} (role: ${userRole})`, {
-                requiredRoles: allowedRoles,
-                path: req.path
-            });
-            return errorResponse(
-                res,
-                `Access denied. Required role: ${allowedRoles.join(' or ')}`,
-                403
-            );
-        }
-
-        next();
-    };
+const authorizeRole = (...roles) => (req, res, next) => {
+    const r = req.user?.role;
+    if (!r || !roles.includes(r)) {
+        logger.warn('access denied', { uid: req.user?.id, role: r, need: roles });
+        return fail(res, `need role: ${roles.join('/')}`, 403);
+    }
+    next();
 };
 
-module.exports = {
-    authenticateToken,
-    authorizeRole
-};
+module.exports = { authenticate, authorizeRole };

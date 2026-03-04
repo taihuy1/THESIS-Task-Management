@@ -1,24 +1,19 @@
-const TOKEN_KEY = 'auth_token';
-const USER_KEY = 'auth_user';
+const TK = 'auth_token';
+const UK = 'auth_user';
 
-export function saveToken(token: string): void {
-    localStorage.setItem(TOKEN_KEY, token);
-}
+export const saveToken = (t: string) => localStorage.setItem(TK, t);
+export const getToken = () => localStorage.getItem(TK);
 
-export function getToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
-}
-
-export function saveUser(user: object): void {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+export function saveUser(user: object) {
+    localStorage.setItem(UK, JSON.stringify(user));
 }
 
 export function getUser<T>(): T | null {
-    const user = localStorage.getItem(USER_KEY);
-    return user ? JSON.parse(user) : null;
+    const raw = localStorage.getItem(UK);
+    return raw ? JSON.parse(raw) : null;
 }
 
-export function clearAuth(): void {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+export function clearAuth() {
+    localStorage.removeItem(TK);
+    localStorage.removeItem(UK);
 }

@@ -1,113 +1,64 @@
 const express = require('express');
 const cors = require('cors');
-const {
-    PORT,
-    CORS_ORIGIN,
-    NODE_ENV,
-    prisma
-} = require('./src/config');
-const {
-    authRoutes,
-    userRoutes,
-    taskRoutes,
-    notificationRoutes,
-    sseRoutes
-} = require('./src/routes');
-const {
-    requestLogger,
-    errorHandler,
-    notFoundHandler
-} = require('./src/middleware');
+const { PORT, CORS_ORIGIN, NODE_ENV } = require('./src/config/app.config');
+const { prisma } = require('./src/config/database.config');
+const { authRoutes, userRoutes, taskRoutes, notificationRoutes, sseRoutes } = require('./src/routes');
+const { requestLogger } = require('./src/middleware/logger.middleware');
+const { errorHandler, notFound } = require('./src/middleware/error.middleware');
 const logger = require('./src/utils/logger');
 
 const app = express();
-
-// Middleware
 app.use(express.json());
 app.use(cors({
-    origin: CORS_ORIGIN,
-    credentials: true,
+    origin: CORS_ORIGIN, credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
 }));
-
-// Request logging
 app.use(requestLogger);
 
-// Health check
-app.get('/health', async (req, res) => {
+app.get('/health', async (_req, res) => {
+    // quick db ping for uptime checks
     try {
         await prisma.$queryRaw`SELECT 1`;
-        res.json({
-            status: 'ok',
-            timestamp: new Date().toISOString(),
-            database: 'connected',
-            environment: NODE_ENV
-        });
-    } catch (error) {
-        logger.error('Health check failed:', error);
-        res.status(503).json({
-            status: 'error',
-            timestamp: new Date().toISOString(),
-            database: 'disconnected',
-            error: error.message
-        });
+        res.json({ status: 'ok', db: 'up', env: NODE_ENV });
+    } catch (e) {
+        logger.error('health check fail', e);
+        res.status(503).json({ status: 'error', db: 'down' });
     }
 });
 
-// API Routes
-const API_PREFIX = '/api/v1'; // Future proofing, currently mapping directly to match existing frontend
-
-// Mapping to match existing frontend expectations (no /api/v1 prefix yet)
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/task', taskRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/events', sseRoutes);
-
-// 404 Handler
-app.use(notFoundHandler);
-
-// Global Error Handler
+app.use(notFound);
 app.use(errorHandler);
 
-// Server Start
 const startServer = async () => {
     try {
         await prisma.$connect();
-        logger.info('Database connected via Prisma');
+        logger.info('db connected');
 
-        const server = app.listen(PORT, '0.0.0.0', () => {
-            logger.info(`Server running on port ${PORT}`);
-            logger.info(`Environment: ${NODE_ENV}`);
-            logger.info(`CORS origin: ${CORS_ORIGIN}`);
+        const srv = app.listen(PORT, '0.0.0.0', () => {
+            logger.info(`listening on :${PORT} [${NODE_ENV}]`);
         });
 
-        // Handle server errors (e.g. port in use)
-        server.on('error', (error) => {
-            if (error.code === 'EADDRINUSE') {
-                logger.error(`Port ${PORT} is already in use`);
-            } else {
-                logger.error('Server error:', error);
-            }
+        srv.on('error', (err) => {
+            logger.error(err.code === 'EADDRINUSE' ? `port ${PORT} busy` : 'srv error', err);
             process.exit(1);
         });
 
-        // Graceful Shutdown
-        const shutdown = async (signal) => {
-            logger.info(`${signal} received, shutting down gracefully`);
-            server.close(async () => {
-                logger.info('HTTP server closed');
+        const shutdown = async (sig) => {
+            logger.info(`${sig} — shutting down`);
+            srv.close(async () => {
                 await prisma.$disconnect();
-                logger.info('Prisma disconnected');
                 process.exit(0);
             });
         };
-
         process.on('SIGTERM', () => shutdown('SIGTERM'));
         process.on('SIGINT', () => shutdown('SIGINT'));
-
-    } catch (error) {
-        logger.error('Failed to start server:', error);
+    } catch (err) {
+        logger.error('startup failed', err);
         process.exit(1);
     }
 };

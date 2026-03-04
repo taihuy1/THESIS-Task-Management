@@ -1,54 +1,28 @@
-// Centralized error handling
-const { errorResponse } = require('../utils/response');
+const { fail } = require('../utils/response');
 const logger = require('../utils/logger');
 const { AppError } = require('../utils/errors');
 
-const errorHandler = (err, req, res, next) => {
-    // Log error
-    logger.logError(err, {
-        method: req.method,
-        url: req.originalUrl,
-        userId: req.user?.id
-    });
+const errorHandler = (err, req, res, _next) => {
+    logger.error(`${req.method} ${req.originalUrl} => ${err.message}`);
 
-    // Handle operational errors (our custom errors)
-    if (err instanceof AppError && err.isOperational) {
-        return errorResponse(res, err.message, err.statusCode, err.errors);
-    }
+    if (err instanceof AppError && err.isOperational)
+        return fail(res, err.message, err.statusCode, err.errors);
 
-    // Handle Prisma errors
-    if (err.code === 'P2002') {
-        return errorResponse(res, 'A record with this value already exists', 409);
-    }
+    // some places throw plain Errors with a statusCode attached
+    if (err.isOperational && err.statusCode)
+        return fail(res, err.message, err.statusCode);
 
-    if (err.code === 'P2025') {
-        return errorResponse(res, 'Record not found', 404);
-    }
+    if (err.code === 'P2002') return fail(res, 'duplicate record', 409);
+    if (err.code === 'P2025') return fail(res, 'not found', 404);
 
-    // Handle JWT errors
-    if (err.name === 'JsonWebTokenError') {
-        return errorResponse(res, 'Invalid token', 401);
-    }
+    if (err.name === 'JsonWebTokenError') return fail(res, 'bad token', 401);
+    if (err.name === 'TokenExpiredError') return fail(res, 'token expired', 401);
 
-    if (err.name === 'TokenExpiredError') {
-        return errorResponse(res, 'Token expired. Please login again', 401);
-    }
-
-    // Handle unknown errors
-    const isDevelopment = process.env.NODE_ENV === 'development';
-
-    return errorResponse(
-        res,
-        isDevelopment ? err.message : 'Internal server error',
-        500
-    );
+    const msg = process.env.NODE_ENV === 'development' ? err.message : 'server error';
+    return fail(res, msg, 500);
 };
 
-const notFoundHandler = (req, res) => {
-    return errorResponse(res, `Route ${req.method} ${req.path} not found`, 404);
-};
+const notFound = (req, res) =>
+    fail(res, `${req.method} ${req.path} not found`, 404);
 
-module.exports = {
-    errorHandler,
-    notFoundHandler
-};
+module.exports = { errorHandler, notFound };

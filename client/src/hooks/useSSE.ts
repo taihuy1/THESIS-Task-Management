@@ -1,24 +1,15 @@
-/*
-  useSSE.ts
-  Opens a persistent Server-Sent Events connection so the UI
-  refreshes instantly when tasks or notifications change on the server.
-  Reconnects automatically if the connection drops.
-*/
-
 import { useEffect, useRef, useCallback } from 'react';
 import { getToken } from '@/services/storage/authStorage';
 import { config } from '@/constants/config';
 
-type SSEHandler = () => void;
+type Handler = () => void;
 
 interface UseSSEOptions {
-  onTaskUpdate?: SSEHandler;
-  onNotification?: SSEHandler;
+  onTaskUpdate?: Handler;
+  onNotification?: Handler;
 }
 
 export function useSSE({ onTaskUpdate, onNotification }: UseSSEOptions) {
-  // Store latest callbacks in refs so the EventSource listeners
-  // always invoke the current version without triggering a reconnect.
   const taskRef = useRef(onTaskUpdate);
   const notifRef = useRef(onNotification);
   taskRef.current = onTaskUpdate;
@@ -28,17 +19,14 @@ export function useSSE({ onTaskUpdate, onNotification }: UseSSEOptions) {
     const token = getToken();
     if (!token) return null;
 
-    const url = `${config.apiBaseUrl}/events/stream?token=${encodeURIComponent(token)}`;
-    const es = new EventSource(url);
-
+    const es = new EventSource(
+      `${config.apiBaseUrl}/events/stream?token=${encodeURIComponent(token)}`
+    );
     es.addEventListener('task-update', () => taskRef.current?.());
     es.addEventListener('notification', () => notifRef.current?.());
-
-    // EventSource retries automatically on error — no manual handling needed.
-    // If the token is expired the server responds 401 and the auth
-    // interceptor will redirect to login on the next API call.
-    es.onerror = () => {};
-
+    es.onerror = () => {
+      console.warn('SSE connection dropped, browser will retry');
+    };
     return es;
   }, []);
 

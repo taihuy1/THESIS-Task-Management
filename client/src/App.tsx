@@ -14,7 +14,6 @@ function App() {
                 <Routes>
                     <Route path={ROUTES.LOGIN} element={<LoginPage />} />
 
-                    {/* Protected Routes */}
                     <Route element={<RequireAuth allowedRoles={[Role.AUTHOR]} />}>
                         <Route path={ROUTES.AUTHOR_DASHBOARD} element={<AuthorDashboard />} />
                     </Route>
@@ -23,7 +22,6 @@ function App() {
                         <Route path={ROUTES.SOLVER_DASHBOARD} element={<SolverDashboard />} />
                     </Route>
 
-                    {/* Fallback */}
                     <Route path="*" element={<Navigate to={ROUTES.LOGIN} replace />} />
                 </Routes>
             </BrowserRouter>

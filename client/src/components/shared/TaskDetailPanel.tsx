@@ -1,15 +1,9 @@
-/*
-  TaskDetailPanel.tsx
-  Shows full information for the selected task below the table.
-  Role-aware:
-    - Authors see Edit, Approve, Reject, Delete buttons
-    - Solvers see Start, Complete buttons (status changes only)
-*/
-
+import { useState } from 'react';
 import { Task, TaskStatus } from '@/types/task.types';
 import { getStatusLabel, getStatusColor } from '@/utils/taskHelpers';
 import { formatDeadlineDate } from '@/utils/deadlineHelpers';
 import TaskDeadlineDisplay from '@/components/Deadline/TaskDeadlineDisplay';
+import TaskLifecycleStepper from '@/components/shared/TaskLifecycleStepper';
 import '@/styles/dashboard.css';
 
 interface Props {
@@ -17,21 +11,43 @@ interface Props {
   role: 'AUTHOR' | 'SOLVER';
   onEdit?: () => void;
   onApprove?: (id: string) => void;
-  onReject?: (id: string) => void;
+  onReject?: (id: string, reason: string) => void;
   onDelete?: (id: string) => void;
   onStart?: (id: string) => void;
-  onComplete?: (id: string) => void;
+  onComplete?: (id: string, completionNote: string) => void;
 }
 
 export default function TaskDetailPanel({
   task, role, onEdit, onApprove, onReject, onDelete, onStart, onComplete,
 }: Props) {
+  // these need casting because Task type doesn't include the joined fields
   const solver = (task as any).solver;
   const author = (task as any).author;
+
+  const [showCompleteForm, setShowCompleteForm] = useState(false);
+  const [completionNote, setCompletionNote] = useState('');
+  const [showRejectForm, setShowRejectForm] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  const handleComplete = () => {
+    if (!completionNote.trim()) return;
+    onComplete?.(task.id, completionNote.trim());
+    setCompletionNote('');
+    setShowCompleteForm(false);
+  };
+
+  function handleReject() {
+    if (!rejectionReason.trim()) return;
+    onReject?.(task.id, rejectionReason.trim());
+    setRejectionReason('');
+    setShowRejectForm(false);
+  }
 
   return (
     <div className="detail-panel">
       <h3>{task.title}</h3>
+
+      <TaskLifecycleStepper status={task.status} />
 
       <div className="detail-grid">
         <div className="detail-field">
@@ -69,7 +85,7 @@ export default function TaskDetailPanel({
 
         <div className="detail-field detail-description">
           <label>Description</label>
-          <p>{task.description || 'No description provided.'}</p>
+          <p>{task.description || 'No description'}</p>
         </div>
 
         <div className="detail-field">
@@ -82,6 +98,13 @@ export default function TaskDetailPanel({
           <span>{new Date(task.updatedAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</span>
         </div>
 
+        {task.completionNote && (
+          <div className="detail-field detail-description">
+            <label>Completion Note</label>
+            <p style={{ color: '#059669' }}>{task.completionNote}</p>
+          </div>
+        )}
+
         {task.rejectionReason && (
           <div className="detail-field detail-description">
             <label>Rejection Reason</label>
@@ -90,7 +113,50 @@ export default function TaskDetailPanel({
         )}
       </div>
 
-      {/* Action buttons */}
+      {showCompleteForm && (
+        <div className="inline-prompt">
+          <label>What has been done?</label>
+          <textarea
+            value={completionNote}
+            onChange={e => setCompletionNote(e.target.value)}
+            placeholder="What did you do?"
+            rows={3}
+            maxLength={500}
+            autoFocus
+          />
+          <div className="inline-prompt-actions">
+            <button className="btn-complete" onClick={handleComplete} disabled={!completionNote.trim()}>
+              Submit
+            </button>
+            <button className="btn-cancel" onClick={() => { setShowCompleteForm(false); setCompletionNote(''); }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showRejectForm && (
+        <div className="inline-prompt">
+          <label>Why are you rejecting this task?</label>
+          <textarea
+            value={rejectionReason}
+            onChange={e => setRejectionReason(e.target.value)}
+            placeholder="What needs fixing?"
+            rows={3}
+            maxLength={300}
+            autoFocus
+          />
+          <div className="inline-prompt-actions">
+            <button className="btn-reject" onClick={handleReject} disabled={!rejectionReason.trim()}>
+              Reject
+            </button>
+            <button className="btn-cancel" onClick={() => { setShowRejectForm(false); setRejectionReason(''); }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="detail-actions">
         {role === 'AUTHOR' && (
           <>
@@ -100,11 +166,11 @@ export default function TaskDetailPanel({
             {task.status === TaskStatus.COMPLETED && onApprove && (
               <button className="btn-approve" onClick={() => onApprove(task.id)}>Approve</button>
             )}
-            {task.status === TaskStatus.COMPLETED && onReject && (
-              <button className="btn-reject" onClick={() => onReject(task.id)}>Reject</button>
+            {task.status === TaskStatus.COMPLETED && onReject && !showRejectForm && (
+              <button className="btn-reject" onClick={() => setShowRejectForm(true)}>Reject</button>
             )}
             {onDelete && (
-              <button className="btn-delete" onClick={() => confirm('Delete this task?') && onDelete(task.id)}>
+              <button className="btn-delete" onClick={() => confirm('Delete task?') && onDelete(task.id)}>
                 Delete
               </button>
             )}
@@ -116,8 +182,8 @@ export default function TaskDetailPanel({
             {task.status === TaskStatus.PENDING && onStart && (
               <button className="btn-start" onClick={() => onStart(task.id)}>Start Working</button>
             )}
-            {task.status === TaskStatus.STARTED && onComplete && (
-              <button className="btn-complete" onClick={() => onComplete(task.id)}>Mark Complete</button>
+            {task.status === TaskStatus.STARTED && onComplete && !showCompleteForm && (
+              <button className="btn-complete" onClick={() => setShowCompleteForm(true)}>Mark Complete</button>
             )}
           </>
         )}

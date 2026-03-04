@@ -74,6 +74,7 @@ model Task {
   approvedAt      DateTime?
   rejectedAt      DateTime?
   rejectionReason String?
+  completionNote  String?
 
   dueDate   DateTime?
   createdAt DateTime  @default(now())

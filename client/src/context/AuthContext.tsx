@@ -1,9 +1,4 @@
-import {
-    createContext,
-    useContext,
-    useState,
-    ReactNode,
-} from 'react';
+import { createContext, useContext, useState, ReactNode } from 'react';
 import { User, LoginCredentials } from '@/types/user.types';
 import * as authService from '@/services/api/authService';
 import { saveToken, saveUser, getUser, clearAuth } from '@/services/storage/authStorage';
@@ -12,9 +7,9 @@ import { normalizeError } from '@/utils/errorHandler';
 interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
-    isLoading: boolean;
-    login: (credentials: LoginCredentials) => Promise<User>;
-    logout: () => Promise<void>;
+    loading: boolean;
+    login: (credentials: LoginCredentials) => Promise<User | null>;
+    logout: () => void;
     error: string | null;
 }
 
@@ -22,43 +17,37 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(getUser<User>());
-    const [isLoading, setIsLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const isAuthenticated = !!user;
-
-    const login = async (credentials: LoginCredentials): Promise<User> => {
+    async function login(credentials: LoginCredentials): Promise<User | null> {
+        setLoading(true);
+        setError(null);
         try {
-            setIsLoading(true);
-            setError(null);
-            const { accessToken, user: loggedInUser } = await authService.login(credentials);
+            const { accessToken, user: u } = await authService.login(credentials);
             saveToken(accessToken);
-            saveUser(loggedInUser);
-            setUser(loggedInUser);
-            return loggedInUser;
+            saveUser(u);
+            setUser(u);
+            setLoading(false);
+            return u;
         } catch (err) {
-            const apiError = normalizeError(err);
-            setError(apiError.message);
-            throw err;
-        } finally {
-            setIsLoading(false);
+            const msg = normalizeError(err).message;
+            setError(msg);
+            setLoading(false);
+            return null;
         }
-    };
+    }
 
-    const logout = async () => {
-        try {
-            await authService.logout();
-        } catch (err) {
-            console.error('Logout error:', err);
-        } finally {
-            clearAuth();
-            setUser(null);
-        }
-    };
+    function logout() {
+        // fire and forget, if it fails we still clear local state
+        authService.logout().catch(() => {});
+        clearAuth();
+        setUser(null);
+    }
 
     return (
         <AuthContext.Provider
-            value={{ user, isAuthenticated, isLoading, login, logout, error }}
+            value={{ user, isAuthenticated: !!user, loading, login, logout, error }}
         >
             {children}
         </AuthContext.Provider>
@@ -66,9 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within AuthProvider');
-    }
-    return context;
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error('wrap your app in AuthProvider');
+    return ctx;
 }

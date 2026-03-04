@@ -7,22 +7,21 @@ import { Role } from '@/types/user.types';
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const { login, isLoading, error } = useAuth();
+    const { login, loading, error } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        try {
-            const user = await login({ email, password });
+        const user = await login({ email, password });
+        if (user) {
             navigate(user.role === Role.AUTHOR ? ROUTES.AUTHOR_DASHBOARD : ROUTES.SOLVER_DASHBOARD);
-        } catch {
-            // error state handled by AuthContext
         }
     };
 
     return (
-        <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px' }}>
-            <h1>Login</h1>
+        <div style={{ maxWidth: '400px', margin: '80px auto', padding: '24px' }}>
+            <h1 style={{ marginBottom: '8px' }}>Task Manager</h1>
+            <p style={{ color: '#6b7280', marginTop: 0, marginBottom: '24px' }}>Sign in to continue</p>
             <form onSubmit={handleSubmit}>
                 <div style={{ marginBottom: '16px' }}>
                     <label htmlFor="email">Email</label>
@@ -44,9 +43,9 @@ export default function LoginPage() {
                         required
                     />
                 </div>
-                {error && <p style={{ color: 'red' }}>{error}</p>}
-                <button type="submit" disabled={isLoading}>
-                    {isLoading ? 'Logging in...' : 'Login'}
+                {error && <p style={{ color: '#b91c1c', fontSize: '14px' }}>{error}</p>}
+                <button type="submit" disabled={loading} style={{ width: '100%' }}>
+                    {loading ? 'Signing in...' : 'Sign in'}
                 </button>
             </form>
         </div>

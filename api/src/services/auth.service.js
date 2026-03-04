@@ -1,82 +1,58 @@
-// Auth service — login, registration, token verification
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET, JWT_EXPIRES_IN, SALT_ROUNDS } = require('../config/auth.config');
-const userRepository = require('../repositories/user.repository');
-const { AuthenticationError, ConflictError } = require('../utils/errors');
+const userRepo = require('../repositories/user.repository');
+const { AccessError } = require('../utils/errors');
 const logger = require('../utils/logger');
 
 const login = async (email, password) => {
-    const user = await userRepository.findByEmail(email);
+    const user = await userRepo.findByEmail(email);
     if (!user) {
-        logger.warn(`Login attempt failed: user "${email}" not found`);
-        throw new AuthenticationError('Invalid credentials');
+        logger.warn('login failed', { email });
+        throw new AccessError('invalid credentials');
     }
 
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
-        logger.warn(`Login attempt failed: invalid password for user "${email}"`);
-        throw new AuthenticationError('Invalid credentials');
+    // bcrypt compare
+    const ok = await bcrypt.compare(password, user.password);
+    if (!ok) {
+        logger.warn('bad password', { email });
+        throw new AccessError('invalid credentials');
     }
 
     const accessToken = jwt.sign(
         { id: user.id, role: user.role },
-        JWT_SECRET,
-        { expiresIn: JWT_EXPIRES_IN }
+        JWT_SECRET, { expiresIn: JWT_EXPIRES_IN }
     );
-
-    logger.info(`User "${email}" logged in successfully`, { userId: user.id, role: user.role });
+    logger.info('login', { userId: user.id });
 
     return {
         accessToken,
-        user: {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            role: user.role
-        }
+        user: { id: user.id, email: user.email, name: user.name, role: user.role }
     };
 };
 
 const register = async (email, password, role, name) => {
-    const exists = await userRepository.existsByEmail(email);
-    if (exists) {
-        logger.warn(`Registration failed: email "${email}" already exists`);
-        throw new ConflictError('Email already exists');
+    if (await userRepo.existsByEmail(email)) {
+        // don't bother with a custom error class for this one case
+        const err = new Error('email already registered');
+        err.statusCode = 409;
+        err.isOperational = true;
+        throw err;
     }
-
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-
-    const user = await userRepository.create({
-        email,
-        password: hashedPassword,
-        role,
-        name
-    });
-
-    logger.info(`New user registered: "${email}"`, { userId: user.id, role });
-
-    return {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role
-    };
+    const hash = await bcrypt.hash(password, SALT_ROUNDS);
+    const user = await userRepo.create({ email, password: hash, role, name });
+    logger.info('register', { userId: user.id, role });
+    return { id: user.id, email: user.email, name: user.name, role: user.role };
 };
 
 const verifyToken = (token) => {
     try {
         return jwt.verify(token, JWT_SECRET);
-    } catch (error) {
-        if (error.name === 'TokenExpiredError') {
-            throw new AuthenticationError('Token expired. Please login again');
-        }
-        throw new AuthenticationError('Invalid token');
+    } catch (err) {
+        throw new AccessError(
+            err.name === 'TokenExpiredError' ? 'token expired' : 'bad token'
+        );
     }
 };
 
-module.exports = {
-    login,
-    register,
-    verifyToken
-};
+module.exports = { login, register, verifyToken };

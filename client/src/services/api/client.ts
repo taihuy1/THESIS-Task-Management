@@ -10,30 +10,24 @@ const apiClient = axios.create({
     },
 });
 
-// Request interceptor: attach token
 apiClient.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
+    (cfg: InternalAxiosRequestConfig) => {
         const token = getToken();
-        if (token && config.headers) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
+        if (token && cfg.headers) cfg.headers.Authorization = `Bearer ${token}`;
+        return cfg;
     },
-    (error) => Promise.reject(error)
+    (err) => Promise.reject(err)
 );
 
-// Response interceptor: handle 401
 apiClient.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
+    (res) => res,
+    (err) => {
+        if (err.response?.status === 401) {
             clearAuth();
-            // Only redirect if not already on login page to avoid loops
-            if (!window.location.pathname.includes('/login')) {
-                window.location.href = '/login';
-            }
+            // kick them back to login, unless they're already there
+            if (!window.location.pathname.includes('/login')) window.location.href = '/login';
         }
-        return Promise.reject(error);
+        return Promise.reject(err);
     }
 );
 

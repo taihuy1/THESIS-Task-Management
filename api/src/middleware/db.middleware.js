@@ -1,18 +1,15 @@
-// Database availability check
 const { prisma } = require('../config/database.config');
-const { errorResponse } = require('../utils/response');
+const { fail } = require('../utils/response');
 const logger = require('../utils/logger');
 
-const requireDatabase = async (req, res, next) => {
+const dbCheck = async (req, res, next) => {
     try {
         await prisma.$queryRaw`SELECT 1`;
         next();
-    } catch (error) {
-        logger.error('Database connection failed:', error);
-        return errorResponse(res, 'Database connection unavailable', 503);
+    } catch (e) {
+        logger.error('db down', e);
+        return fail(res, 'db unavailable', 503);
     }
 };
 
-module.exports = {
-    requireDatabase
-};
+module.exports = { dbCheck };

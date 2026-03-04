@@ -1,11 +1,6 @@
+// task and notification endpoints used across multiple files
+// auth and user paths are just hardcoded in their service files, not worth centralizing
 export const API_ENDPOINTS = {
-    AUTH: {
-        LOGIN: '/auth/login',
-        REGISTER: '/auth/register',
-        LOGOUT: '/auth/logout',
-        REFRESH: '/auth/refresh',
-        ME: '/auth/me',
-    },
     TASKS: {
         BASE: '/task',
         BY_ID: (id: string) => `/task/${id}`,
@@ -21,9 +16,4 @@ export const API_ENDPOINTS = {
         MARK_ALL_READ: '/notifications/read-all',
         UNREAD_COUNT: '/notifications/unread-count',
     },
-    USERS: {
-        BASE: '/users',
-        BY_ID: (id: string) => `/users/${id}`,
-        SOLVERS: '/users',
-    },
-} as const;
+};

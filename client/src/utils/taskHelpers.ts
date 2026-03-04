@@ -7,25 +7,24 @@ const statusLabels: Record<TaskStatus, string> = {
   [TaskStatus.APPROVED]: 'Approved',
   [TaskStatus.REJECTED]: 'Rejected',
 };
-
-const statusColors: Record<TaskStatus, string> = {
-  [TaskStatus.PENDING]: '#6b7280',
-  [TaskStatus.STARTED]: '#2563eb',
-  [TaskStatus.COMPLETED]: '#d97706',
-  [TaskStatus.APPROVED]: '#10b981',
-  [TaskStatus.REJECTED]: '#dc2626',
+// string keys, not enum
+const statusColors: Record<string, string> = {
+  PENDING: '#6b7280',
+  STARTED: '#2563eb',
+  COMPLETED: '#d97706',
+  APPROVED: '#10b981',
+  REJECTED: '#dc2626',
 };
 
-const priorityLabels: Record<Priority, string> = {
-  [Priority.LOW]: 'Low',
-  [Priority.MEDIUM]: 'Medium',
-  [Priority.HIGH]: 'High',
+const priorityLabels: Record<string, string> = {
+  LOW: 'Low',
+  MEDIUM: 'Medium',
+  HIGH: 'High',
 };
 
 export function getStatusLabel(status: TaskStatus) {
   return statusLabels[status] || status;
 }
-
 export function getStatusColor(status: TaskStatus) {
   return statusColors[status] || '#6b7280';
 }

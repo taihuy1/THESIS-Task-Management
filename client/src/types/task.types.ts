@@ -6,11 +6,7 @@ export enum TaskStatus {
     REJECTED = 'REJECTED',
 }
 
-export enum Priority {
-    LOW = 'LOW',
-    MEDIUM = 'MEDIUM',
-    HIGH = 'HIGH',
-}
+export type Priority = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export interface UserRef {
     id: string;
@@ -33,6 +29,7 @@ export interface Task {
     approvedAt?: string;
     rejectedAt?: string;
     rejectionReason?: string;
+    completionNote?: string;
     dueDate?: string;
     createdAt: string;
     updatedAt: string;
@@ -43,7 +40,7 @@ export interface CreateTaskPayload {
     desc: string;
     solvers: string[];
     priority?: Priority;
-    dueDate?: string; // ISO date string (e.g., "2025-02-20T18:00:00Z")
+    dueDate?: string;
 }
 
 export interface UpdateTaskPayload {

@@ -1,19 +1,16 @@
-import { ApiError } from '@/types/api.types';
 import axios, { AxiosError } from 'axios';
 
-export function normalizeError(err: unknown): ApiError {
+type NormalizedError = { message: string; status: number; code?: string };
+
+export function normalizeError(err: unknown): NormalizedError {
     if (axios.isAxiosError(err)) {
-        const axErr = err as AxiosError<any>;
+        const ax = err as AxiosError<any>;
         return {
-            message: axErr.response?.data?.message || axErr.message,
-            status: axErr.response?.status || 500,
-            code: axErr.code,
+            message: ax.response?.data?.message || ax.message,
+            status: ax.response?.status || 500,
+            code: ax.code,
         };
     }
-
-    if (err instanceof Error) {
-        return { message: err.message, status: 500 };
-    }
-
-    return { message: 'Something went wrong', status: 500 };
+    if (err instanceof Error) return { message: err.message, status: 500 };
+    return { message: 'unexpected error', status: 500 };
 }
