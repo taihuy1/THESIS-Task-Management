@@ -13,6 +13,8 @@ Authors create tasks and assign them to solvers, then review the work when it's 
 
 You will need two terminal windows, one for the backend and one for the frontend.
 
+DELETE THE FILE PLAYWRIGHT.ts (testing purpose)
+
 ### Database
 
 Make sure PostgreSQL is running, then create the database.
@@ -105,10 +107,7 @@ Click the bell to see your notifications. Unread ones show a red badge.
 ## Task states
 
 ```
-PENDING → STARTED → COMPLETED → APPROVED
-                ↑         |
-                └─────────┘
-                 (on reject)
+PENDING → STARTED → COMPLETED → APPROVED ( IF REJECTED TURN BACK TO STARTED)
 ```
 
 Basically: author creates a task (Pending), solver starts it (Started), solver submits it (Completed), author reviews it. If the author approves it, it's done. If rejected, it goes back to Started and the solver tries again.
@@ -127,22 +126,3 @@ Solvers:
 - pavel.kovar@student.edu
 - lucie.horova@student.edu
 
-## Running the tests
-
-There are Playwright e2e tests in `client/tests/e2e/`. You need both servers running first:
-
-```bash
-# start api
-cd api && npm run dev
-
-# start frontend (separate terminal)
-cd client && npm run dev
-
-# run tests (another terminal)
-cd client
-npm run test:e2e
-```
-
-Or if you want the Playwright UI: `npm run test:e2e:ui`
-
-The tests cover login/logout flows, task creation, detail panel rendering, notification bell, status filtering, and responsive layout on different screen sizes.
