@@ -105,6 +105,8 @@ async function completeTask(taskId, solverId, completionNote) {
   logger.info('task:complete', { taskId, solverId });
   sendEvent(task.authorId, 'task-update', { taskId, action: 'completed' });
   sendEvent(task.authorId, 'notification', { taskId });
+  sendEvent(solverId, 'task-update', { taskId, action: 'completed' });
+  sendEvent(solverId, 'notification', { taskId });
   return res;
 }
 
